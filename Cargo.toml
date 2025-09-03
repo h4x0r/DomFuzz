@@ -1,6 +1,6 @@
 [package]
 name = "domfuzz"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Albert Hui <albert@securityronin.com>"]
 description = "A Rust CLI tool for generating domain name variations using typosquatting techniques"
