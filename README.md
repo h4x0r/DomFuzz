@@ -4,7 +4,7 @@ A comprehensive domain name fuzzing tool written in Rust for generating typosqua
 
 ## Overview
 
-DomFuzz generates domain name variations using advanced typosquatting techniques commonly employed in phishing campaigns and cybersquatting attacks. The tool implements algorithms from leading domain fuzzing tools like URLCrazy, dnstwist, and URLInsane, providing comprehensive coverage of domain manipulation techniques.
+DomFuzz generates domain name variations using advanced typosquatting techniques commonly employed in phishing campaigns and cybersquatting attacks. The tool implements algorithms from leading domain fuzzing tools like URLCrazy, dnstwist, URLInsane, and DomainFuzz, providing comprehensive coverage of domain manipulation techniques.
 
 ## Features
 
@@ -230,12 +230,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [URLCrazy](https://github.com/urbanadventurer/urlcrazy) - Original Ruby implementation
 - [dnstwist](https://github.com/elceef/dnstwist) - Python domain fuzzing tool
 - [URLInsane](https://github.com/rangertaha/urlinsane) - Go domain fuzzing tool
+- [DomainFuzz](https://github.com/monkeym4ster/DomainFuzz) - Python domain fuzzing tool
 - [Unicode Homoglyph Research](https://www.unicode.org/reports/tr39/)
 
 ## Changelog
 
 ### v0.1.1
-- Added 13 new fuzzing algorithms from URLCrazy, dnstwist, and URLInsane
+- Added 13 new fuzzing algorithms from URLCrazy, dnstwist, URLInsane, and DomainFuzz
 - Organized algorithms into logical groups
 - Improved CLI with help groupings
 - Enhanced Unicode support
