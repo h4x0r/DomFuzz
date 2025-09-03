@@ -229,6 +229,7 @@ name = "domfuzz"
 version = "0.1.1"
 dependencies = [
  "clap",
+ "rand",
  "reqwest",
  "tokio",
  "trust-dns-resolver",

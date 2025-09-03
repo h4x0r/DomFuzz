@@ -10,105 +10,188 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 #[derive(Parser)]
 #[command(name = "domfuzz")]
 #[command(about = "A Rust CLI tool for generating domain name variations using typosquatting techniques")]
+#[command(long_about = "DomFuzz generates domain name variations using comprehensive typosquatting techniques.
+
+Algorithms are organized into logical groups for easier usage:
+
+• Basic Typos: Common typing mistakes
+• Character Manipulation: Advanced character-level attacks
+• Unicode/Script: International character confusion
+• Phonetic/Semantic: Sound and meaning based attacks
+• Number/Word: Numeric and word form substitution
+• Structure: Domain structure manipulation
+• Extensions: TLD and branding attacks")]
 struct Cli {
     /// Domain to generate variations for
     domain: String,
     
-    /// Enable character substitution variations
+    /// Enable ALL algorithms (default if no specific algorithms selected)
     #[arg(long)]
-    char_sub: bool,
+    all: bool,
     
-    /// Enable basic Unicode homoglyph variations
+    /// Limit maximum number of variations to output
     #[arg(long)]
-    homoglyphs: bool,
+    max_variations: Option<usize>,
     
-    /// Enable misspelling variations (insertion, deletion, transposition)
+    /// Check domain availability status (requires network)
     #[arg(long)]
-    misspellings: bool,
-    
-    /// Enable TLD variations
-    #[arg(long)]
-    tld_variations: bool,
-    
-    /// Enable word part swapping variations
-    #[arg(long)]
-    word_swap: bool,
-    
-    /// Enable bitsquatting variations
-    #[arg(long)]
-    bitsquatting: bool,
-    
-    /// Enable keyboard proximity variations
-    #[arg(long)]
-    keyboard: bool,
-    
-    /// Enable repetition variations
-    #[arg(long)]
-    repetition: bool,
-    
-    /// Enable addition variations
-    #[arg(long)]
-    addition: bool,
-    
-    /// Enable subdomain injection variations
-    #[arg(long)]
-    subdomain: bool,
-    
-    /// Enable combosquatting with common keywords
-    #[arg(long)]
-    combosquatting: bool,
-    
-    /// Enable vowel swapping variations
-    #[arg(long)]
-    vowel_swap: bool,
-    
-    /// Enable hyphenation variations
-    #[arg(long)]
-    hyphenation: bool,
-    
-    /// Enable character omission variations
-    #[arg(long)]
-    omission: bool,
-    
-    /// Enable advanced IDN homograph attacks (Unicode/Punycode)
-    #[arg(long)]
-    idn_homograph: bool,
-    
-    /// Enable mixed script attacks (Cyrillic + Latin combinations)
-    #[arg(long)]
-    mixed_script: bool,
-    
-    /// Enable extended Unicode homoglyphs (160k+ characters)
-    #[arg(long)]
-    extended_unicode: bool,
-    
-    /// Enable brand confusion techniques (prefixes/suffixes)
-    #[arg(long)]
-    brand_confusion: bool,
-    
-    /// Enable internationalized TLD variations
-    #[arg(long)]
-    intl_tld: bool,
-    
-    /// Enable cognitive/semantic word confusion attacks
-    #[arg(long)]
-    cognitive: bool,
+    check_status: bool,
     
     /// Path to dictionary file for combosquatting
     #[arg(long)]
     dictionary: Option<String>,
     
-    /// Enable all variation types
+    /// Generate combo attacks by randomly applying multiple algorithms
     #[arg(long)]
-    all: bool,
+    combo: bool,
+
+    // ==================== BASIC TYPOS ====================
     
-    /// Maximum number of variations to output (unlimited if not specified)
-    #[arg(long)]
-    max_variations: Option<usize>,
+    /// Enable character substitution variations (common typos like o->0, l->1)
+    #[arg(long, help_heading = "Basic Typos")]
+    char_sub: bool,
     
-    /// Check domain status (available/registered/parked)
-    #[arg(long)]
-    check_status: bool,
+    /// Enable misspelling variations (insertion, deletion, transposition)
+    #[arg(long, help_heading = "Basic Typos")]
+    misspellings: bool,
+    
+    /// Enable character omission variations
+    #[arg(long, help_heading = "Basic Typos")]
+    omission: bool,
+    
+    /// Enable repetition variations (double characters)
+    #[arg(long, help_heading = "Basic Typos")]
+    repetition: bool,
+    
+    /// Enable keyboard proximity variations (adjacent key typos)
+    #[arg(long, help_heading = "Basic Typos")]
+    keyboard: bool,
+
+    // ==================== CHARACTER MANIPULATION ====================
+    
+    /// Enable bitsquatting variations (bit-flip attacks)
+    #[arg(long, help_heading = "Character Manipulation")]
+    bitsquatting: bool,
+    
+    /// Enable double character replacement variations
+    #[arg(long, help_heading = "Character Manipulation")]
+    double_char_replacement: bool,
+    
+    /// Enable bidirectional character insertion variations
+    #[arg(long, help_heading = "Character Manipulation")]
+    bidirectional_insertion: bool,
+
+    // ==================== UNICODE/SCRIPT ATTACKS ====================
+    
+    /// Enable basic Unicode homoglyph variations
+    #[arg(long, help_heading = "Unicode/Script Attacks")]
+    homoglyphs: bool,
+    
+    
+    /// Enable advanced IDN homograph attacks (Unicode/Punycode)
+    #[arg(long, help_heading = "Unicode/Script Attacks")]
+    idn_homograph: bool,
+    
+    /// Enable mixed script attacks (Cyrillic + Latin combinations)
+    #[arg(long, help_heading = "Unicode/Script Attacks")]
+    mixed_script: bool,
+    
+    /// Enable extended Unicode homoglyphs (160k+ characters)
+    #[arg(long, help_heading = "Unicode/Script Attacks")]
+    extended_unicode: bool,
+    
+    /// Enable comprehensive Cyrillic substitution variations
+    #[arg(long, help_heading = "Unicode/Script Attacks")]
+    cyrillic_comprehensive: bool,
+
+    // ==================== PHONETIC/SEMANTIC ====================
+    
+    /// Enable homophone variations (sound-alike words)
+    #[arg(long, help_heading = "Phonetic/Semantic")]
+    homophones: bool,
+    
+    /// Enable vowel swapping variations
+    #[arg(long, help_heading = "Phonetic/Semantic")]
+    vowel_swap: bool,
+    
+    /// Enable cognitive/semantic word confusion attacks
+    #[arg(long, help_heading = "Phonetic/Semantic")]
+    cognitive: bool,
+    
+    /// Enable singular/plural variations
+    #[arg(long, help_heading = "Phonetic/Semantic")]
+    singular_plural: bool,
+
+    // ==================== NUMBER/WORD SUBSTITUTION ====================
+    
+    /// Enable cardinal number substitution variations (one->1)
+    #[arg(long, help_heading = "Number/Word Substitution")]
+    cardinal_substitution: bool,
+    
+    /// Enable ordinal number substitution variations (first->1st)
+    #[arg(long, help_heading = "Number/Word Substitution")]
+    ordinal_substitution: bool,
+
+    // ==================== STRUCTURE MANIPULATION ====================
+    
+    /// Enable word part swapping variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    word_swap: bool,
+    
+    /// Enable hyphenation variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    hyphenation: bool,
+    
+    /// Enable addition variations (prefix/suffix single chars)
+    #[arg(long, help_heading = "Structure Manipulation")]
+    addition: bool,
+    
+    /// Enable subdomain injection variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    subdomain: bool,
+    
+    /// Enable dot insertion variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    dot_insertion: bool,
+    
+    /// Enable dot omission variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    dot_omission: bool,
+    
+    /// Enable dot/hyphen substitution variations
+    #[arg(long, help_heading = "Structure Manipulation")]
+    dot_hyphen_sub: bool,
+
+    // ==================== DOMAIN EXTENSIONS ====================
+    
+    /// Enable TLD variations
+    #[arg(long, help_heading = "Domain Extensions")]
+    tld_variations: bool,
+    
+    /// Enable internationalized TLD variations
+    #[arg(long, help_heading = "Domain Extensions")]
+    intl_tld: bool,
+    
+    /// Enable wrong second-level domain variations
+    #[arg(long, help_heading = "Domain Extensions")]
+    wrong_sld: bool,
+    
+    /// Enable combosquatting with common keywords
+    #[arg(long, help_heading = "Domain Extensions")]
+    combosquatting: bool,
+    
+    /// Enable brand confusion techniques (authority prefixes/suffixes)
+    #[arg(long, help_heading = "Domain Extensions")]
+    brand_confusion: bool,
+    
+    /// Enable domain prefix variations
+    #[arg(long, help_heading = "Domain Extensions")]
+    domain_prefix: bool,
+    
+    /// Enable domain suffix variations
+    #[arg(long, help_heading = "Domain Extensions")]
+    domain_suffix: bool,
+
 }
 
 #[tokio::main]
@@ -124,46 +207,62 @@ async fn main() {
         && !cli.subdomain && !cli.combosquatting && !cli.vowel_swap 
         && !cli.hyphenation && !cli.omission && !cli.idn_homograph 
         && !cli.mixed_script && !cli.extended_unicode && !cli.brand_confusion 
-        && !cli.intl_tld && !cli.cognitive);
+        && !cli.intl_tld && !cli.cognitive && !cli.dot_insertion 
+        && !cli.dot_omission && !cli.dot_hyphen_sub && !cli.double_char_replacement
+        && !cli.bidirectional_insertion && !cli.cardinal_substitution 
+        && !cli.ordinal_substitution && !cli.homophones && !cli.singular_plural
+        && !cli.wrong_sld && !cli.domain_prefix && !cli.domain_suffix 
+        && !cli.cyrillic_comprehensive && !cli.combo);
+    
+    // Handle combo attacks
+    if cli.combo {
+        let dict_words = if let Some(dict_file) = &cli.dictionary {
+            load_dictionary(dict_file)
+        } else {
+            default_dictionary()
+        };
+        
+        variations.extend(generate_combo_attacks(&domain_name, &tld, cli.max_variations, &dict_words));
+    }
     
     if cli.char_sub || enable_all {
-        variations.extend(generate_char_substitutions(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_char_substitutions(&domain_name, &tld)));
     }
     
     if cli.homoglyphs || enable_all {
-        variations.extend(generate_homoglyphs(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_homoglyphs(&domain_name, &tld)));
     }
     
     if cli.misspellings || enable_all {
-        variations.extend(generate_misspellings(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_misspellings(&domain_name, &tld)));
     }
     
     if cli.tld_variations || enable_all {
-        variations.extend(generate_tld_variations(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_tld_variations(&domain_name, &tld)));
     }
     
     if cli.word_swap || enable_all {
-        variations.extend(generate_word_swaps(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_word_swaps(&domain_name, &tld)));
     }
     
     if cli.bitsquatting || enable_all {
-        variations.extend(generate_bitsquatting(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_bitsquatting(&domain_name, &tld)));
     }
     
     if cli.keyboard || enable_all {
-        variations.extend(generate_keyboard_variations(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_keyboard_variations(&domain_name, &tld)));
     }
     
     if cli.repetition || enable_all {
-        variations.extend(generate_repetition(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_repetition(&domain_name, &tld)));
     }
     
     if cli.addition || enable_all {
-        variations.extend(generate_addition(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_addition(&domain_name, &tld)));
     }
     
     if cli.subdomain || enable_all {
-        variations.extend(generate_subdomain_injection(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_subdomain_injection(&domain_name, &tld)));
     }
     
     if cli.combosquatting || enable_all {
@@ -172,43 +271,95 @@ async fn main() {
         } else {
             default_dictionary()
         };
-        variations.extend(generate_combosquatting(&domain_name, &tld, &dict_words));
+        variations.extend(filter_valid_domains(generate_combosquatting(&domain_name, &tld, &dict_words)));
     }
     
     if cli.vowel_swap || enable_all {
-        variations.extend(generate_vowel_swapping(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_vowel_swapping(&domain_name, &tld)));
     }
     
     if cli.hyphenation || enable_all {
-        variations.extend(generate_hyphenation(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_hyphenation(&domain_name, &tld)));
     }
     
     if cli.omission || enable_all {
-        variations.extend(generate_omission(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_omission(&domain_name, &tld)));
     }
     
     if cli.idn_homograph || enable_all {
-        variations.extend(generate_idn_homograph(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_idn_homograph(&domain_name, &tld)));
     }
     
     if cli.mixed_script || enable_all {
-        variations.extend(generate_mixed_script(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_mixed_script(&domain_name, &tld)));
     }
     
     if cli.extended_unicode || enable_all {
-        variations.extend(generate_extended_unicode(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_extended_unicode(&domain_name, &tld)));
     }
     
     if cli.brand_confusion || enable_all {
-        variations.extend(generate_brand_confusion(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_brand_confusion(&domain_name, &tld)));
     }
     
     if cli.intl_tld || enable_all {
-        variations.extend(generate_intl_tld(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_intl_tld(&domain_name, &tld)));
     }
     
     if cli.cognitive || enable_all {
-        variations.extend(generate_cognitive(&domain_name, &tld));
+        variations.extend(filter_valid_domains(generate_cognitive(&domain_name, &tld)));
+    }
+    
+    if cli.dot_insertion || enable_all {
+        variations.extend(filter_valid_domains(generate_dot_insertion(&domain_name, &tld)));
+    }
+    
+    if cli.dot_omission || enable_all {
+        variations.extend(filter_valid_domains(generate_dot_omission(&domain_name, &tld)));
+    }
+    
+    if cli.dot_hyphen_sub || enable_all {
+        variations.extend(filter_valid_domains(generate_dot_hyphen_substitution(&domain_name, &tld)));
+    }
+    
+    if cli.double_char_replacement || enable_all {
+        variations.extend(filter_valid_domains(generate_double_character_replacement(&domain_name, &tld)));
+    }
+    
+    if cli.bidirectional_insertion || enable_all {
+        variations.extend(filter_valid_domains(generate_bidirectional_insertion(&domain_name, &tld)));
+    }
+    
+    if cli.cardinal_substitution || enable_all {
+        variations.extend(filter_valid_domains(generate_cardinal_substitution(&domain_name, &tld)));
+    }
+    
+    if cli.ordinal_substitution || enable_all {
+        variations.extend(filter_valid_domains(generate_ordinal_substitution(&domain_name, &tld)));
+    }
+    
+    if cli.homophones || enable_all {
+        variations.extend(filter_valid_domains(generate_homophones(&domain_name, &tld)));
+    }
+    
+    if cli.singular_plural || enable_all {
+        variations.extend(filter_valid_domains(generate_singular_plural(&domain_name, &tld)));
+    }
+    
+    if cli.wrong_sld || enable_all {
+        variations.extend(filter_valid_domains(generate_wrong_sld(&domain_name, &tld)));
+    }
+    
+    if cli.domain_prefix || enable_all {
+        variations.extend(filter_valid_domains(generate_domain_prefix(&domain_name, &tld)));
+    }
+    
+    if cli.domain_suffix || enable_all {
+        variations.extend(filter_valid_domains(generate_domain_suffix(&domain_name, &tld)));
+    }
+    
+    if cli.cyrillic_comprehensive || enable_all {
+        variations.extend(filter_valid_domains(generate_cyrillic_comprehensive(&domain_name, &tld)));
     }
     
     // Output results
@@ -366,10 +517,158 @@ fn get_whois_server(tld: &str) -> String {
     }
 }
 
+fn is_valid_domain(domain: &str) -> bool {
+    // Check overall length limit (253 characters for FQDN)
+    if domain.len() > 253 || domain.is_empty() {
+        return false;
+    }
+    
+    // Domain can't start or end with dot
+    if domain.starts_with('.') || domain.ends_with('.') {
+        return false;
+    }
+    
+    // Check for consecutive dots
+    if domain.contains("..") {
+        return false;
+    }
+    
+    // Split into labels and validate each
+    let labels: Vec<&str> = domain.split('.').collect();
+    
+    for label in &labels {
+        // Label can't be empty (handled by consecutive dots check above, but being explicit)
+        if label.is_empty() {
+            return false;
+        }
+        
+        // Label length limit (63 characters)
+        if label.len() > 63 {
+            return false;
+        }
+        
+        // Label can't start or end with hyphen
+        if label.starts_with('-') || label.ends_with('-') {
+            return false;
+        }
+        
+        // Label must contain only valid characters (alphanumeric and hyphens)
+        // Note: We're being permissive to allow Unicode/IDN characters for our use case
+        for ch in label.chars() {
+            if !ch.is_alphanumeric() && ch != '-' && !ch.is_ascii() {
+                // Allow non-ASCII for Unicode/IDN attacks, but reject other invalid chars
+                continue;
+            }
+            if !ch.is_alphanumeric() && ch != '-' && ch.is_ascii() && !ch.is_ascii_alphanumeric() {
+                return false;
+            }
+        }
+    }
+    
+    // Must have at least one dot (domain.tld format)
+    if labels.len() < 2 {
+        return false;
+    }
+    
+    // TLD (last label) must be at least 2 characters
+    if let Some(tld) = labels.last() {
+        if tld.len() < 2 {
+            return false;
+        }
+    }
+    
+    true
+}
+
+fn filter_valid_domains(variations: Vec<String>) -> Vec<String> {
+    variations
+        .into_iter()
+        .filter(|domain| is_valid_domain(domain))
+        .collect()
+}
+
+fn generate_combo_attacks(domain: &str, tld: &str, max_variations: Option<usize>, _dict_words: &[String]) -> Vec<String> {
+    use rand::seq::SliceRandom;
+    use rand::thread_rng;
+    use rand::Rng;
+    
+    let mut variations = Vec::new();
+    let mut rng = thread_rng();
+    
+    // Define all available attack functions
+    let attack_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
+        ("char_sub", Box::new(|d, t| generate_char_substitutions(d, t))),
+        ("homoglyphs", Box::new(|d, t| generate_homoglyphs(d, t))),
+        ("misspellings", Box::new(|d, t| generate_misspellings(d, t))),
+        ("keyboard", Box::new(|d, t| generate_keyboard_variations(d, t))),
+        ("repetition", Box::new(|d, t| generate_repetition(d, t))),
+        ("addition", Box::new(|d, t| generate_addition(d, t))),
+        ("vowel_swap", Box::new(|d, t| generate_vowel_swapping(d, t))),
+        ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t))),
+        ("omission", Box::new(|d, t| generate_omission(d, t))),
+        ("word_swap", Box::new(|d, t| generate_word_swaps(d, t))),
+        ("bitsquatting", Box::new(|d, t| generate_bitsquatting(d, t))),
+        ("dot_insertion", Box::new(|d, t| generate_dot_insertion(d, t))),
+        ("dot_omission", Box::new(|d, t| generate_dot_omission(d, t))),
+        ("double_char_replacement", Box::new(|d, t| generate_double_character_replacement(d, t))),
+        ("bidirectional_insertion", Box::new(|d, t| generate_bidirectional_insertion(d, t))),
+        ("cardinal_substitution", Box::new(|d, t| generate_cardinal_substitution(d, t))),
+        ("ordinal_substitution", Box::new(|d, t| generate_ordinal_substitution(d, t))),
+        ("homophones", Box::new(|d, t| generate_homophones(d, t))),
+        ("singular_plural", Box::new(|d, t| generate_singular_plural(d, t))),
+        ("cyrillic_comprehensive", Box::new(|d, t| generate_cyrillic_comprehensive(d, t))),
+    ];
+    
+    // Generate combo variations by applying random sequences of attacks
+    let target_variations = max_variations.unwrap_or(100); // Default to 100 if no limit specified
+    let mut attempts = 0;
+    let max_attempts = target_variations * 10; // Prevent infinite loops
+    
+    while variations.len() < target_variations && attempts < max_attempts {
+        attempts += 1;
+        let mut current_domain = domain.to_string();
+        let mut current_tld = tld.to_string();
+        let mut applied_attacks = Vec::new();
+        
+        // Randomly choose number of attacks (2-5)
+        let num_attacks = rng.gen_range(2..=5);
+        
+        // Apply random attacks (allowing repeats)
+        for _ in 0..num_attacks {
+            if let Some((attack_name, attack_fn)) = attack_functions.choose(&mut rng) {
+                // Apply the attack and randomly select one result
+                let attack_results = attack_fn(&current_domain, &current_tld);
+                if !attack_results.is_empty() {
+                    if let Some(selected_result) = attack_results.choose(&mut rng) {
+                        // Parse the result to separate domain and TLD for next iteration
+                        let (parsed_domain, parsed_tld) = parse_domain(selected_result);
+                        current_domain = parsed_domain;
+                        current_tld = parsed_tld;
+                        applied_attacks.push(*attack_name);
+                    }
+                }
+            }
+        }
+        
+        // Only add if we successfully applied at least 2 attacks
+        if applied_attacks.len() >= 2 {
+            let final_domain = format!("{}.{}", current_domain, current_tld);
+            if final_domain != format!("{}.{}", domain, tld) 
+                && !variations.contains(&final_domain) 
+                && is_valid_domain(&final_domain) {
+                variations.push(final_domain);
+            }
+        }
+    }
+    
+    variations
+}
+
 fn parse_domain(input: &str) -> (String, String) {
     if let Some(dot_pos) = input.rfind('.') {
-        let domain = input[..dot_pos].to_string();
-        let tld = input[dot_pos + 1..].to_string();
+        let (domain_part, tld_part) = input.split_at(dot_pos);
+        let domain = domain_part.to_string();
+        let tld = tld_part.trim_start_matches('.').to_string();
         (domain, tld)
     } else {
         (input.to_string(), "com".to_string())
@@ -593,28 +892,31 @@ fn generate_misspellings(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
     
     // Character insertion - full alphabet
-    for i in 0..=domain.len() {
+    let char_indices: Vec<_> = domain.char_indices().map(|(i, _)| i).chain(std::iter::once(domain.len())).collect();
+    for &byte_pos in &char_indices {
         for ch in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
             let mut new_domain = domain.to_string();
-            new_domain.insert(i, ch);
+            new_domain.insert(byte_pos, ch);
             variations.push(format!("{}.{}", new_domain, tld));
         }
     }
     
-    // Character deletion (omission)
-    for i in 0..domain.len() {
-        let mut new_domain = domain.to_string();
-        new_domain.remove(i);
-        if !new_domain.is_empty() {
+    // Character deletion (omission) - using char-based approach
+    for i in 0..domain.chars().count() {
+        let mut chars: Vec<char> = domain.chars().collect();
+        chars.remove(i);
+        if !chars.is_empty() {
+            let new_domain: String = chars.into_iter().collect();
             variations.push(format!("{}.{}", new_domain, tld));
         }
     }
     
     // Character transposition (adjacent character swapping)
-    for i in 0..domain.len().saturating_sub(1) {
-        let mut chars: Vec<char> = domain.chars().collect();
-        chars.swap(i, i + 1);
-        let new_domain: String = chars.into_iter().collect();
+    let chars: Vec<char> = domain.chars().collect();
+    for i in 0..chars.len().saturating_sub(1) {
+        let mut char_copy = chars.clone();
+        char_copy.swap(i, i + 1);
+        let new_domain: String = char_copy.into_iter().collect();
         variations.push(format!("{}.{}", new_domain, tld));
     }
     
@@ -653,19 +955,20 @@ fn generate_tld_variations(domain: &str, _tld: &str) -> Vec<String> {
 
 fn generate_word_swaps(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
+    let chars: Vec<char> = domain.chars().collect();
     
-    if domain.len() >= 4 {
-        let mid = domain.len() / 2;
-        let first_half = &domain[..mid];
-        let second_half = &domain[mid..];
+    if chars.len() >= 4 {
+        let mid = chars.len() / 2;
+        let first_half: String = chars[..mid].iter().collect();
+        let second_half: String = chars[mid..].iter().collect();
         variations.push(format!("{}{}.{}", second_half, first_half, tld));
     }
     
-    if domain.len() >= 6 {
-        let third = domain.len() / 3;
-        let first_third = &domain[..third];
-        let middle_third = &domain[third..2*third];
-        let last_third = &domain[2*third..];
+    if chars.len() >= 6 {
+        let third = chars.len() / 3;
+        let first_third: String = chars[..third].iter().collect();
+        let middle_third: String = chars[third..2*third].iter().collect();
+        let last_third: String = chars[2*third..].iter().collect();
         variations.push(format!("{}{}{}.{}", last_third, middle_third, first_third, tld));
     }
     
@@ -675,14 +978,18 @@ fn generate_word_swaps(domain: &str, tld: &str) -> Vec<String> {
 fn generate_bitsquatting(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
     
-    for (i, ch) in domain.chars().enumerate() {
+    let chars: Vec<char> = domain.chars().collect();
+    
+    for (i, &ch) in chars.iter().enumerate() {
         let ch_code = ch as u8;
         for bit_pos in 0..8 {
             let flipped_code = ch_code ^ (1 << bit_pos);
             if let Some(flipped_char) = char::from_u32(flipped_code as u32) {
                 if flipped_char.is_ascii_alphabetic() || flipped_char.is_ascii_digit() {
-                    let mut new_domain = domain.to_string();
-                    new_domain.replace_range(i..i+1, &flipped_char.to_string());
+                    let mut new_domain = String::new();
+                    new_domain.push_str(&chars[..i].iter().collect::<String>());
+                    new_domain.push(flipped_char);
+                    new_domain.push_str(&chars[i+1..].iter().collect::<String>());
                     variations.push(format!("{}.{}", new_domain, tld));
                 }
             }
@@ -718,10 +1025,13 @@ fn generate_keyboard_variations(domain: &str, tld: &str) -> Vec<String> {
 
 fn generate_repetition(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
+    let chars: Vec<char> = domain.chars().collect();
     
-    for (i, ch) in domain.chars().enumerate() {
-        let mut new_domain = domain.to_string();
-        new_domain.insert(i + 1, ch);
+    for (i, &ch) in chars.iter().enumerate() {
+        let mut new_domain = String::new();
+        new_domain.push_str(&chars[..=i].iter().collect::<String>());
+        new_domain.push(ch);
+        new_domain.push_str(&chars[i+1..].iter().collect::<String>());
         variations.push(format!("{}.{}", new_domain, tld));
     }
     
@@ -732,12 +1042,23 @@ fn generate_addition(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
     
     for ch in "abcdefghijklmnopqrstuvwxyz0123456789".chars() {
-        variations.push(format!("{}{}.{}", domain, ch, tld));
-        variations.push(format!("{}{}.{}", ch, domain, tld));
+        // Check length limits (63 chars per label, 253 total)
+        let suffix_variant = format!("{}{}", domain, ch);
+        let prefix_variant = format!("{}{}", ch, domain);
+        
+        if suffix_variant.len() <= 63 {
+            variations.push(format!("{}.{}", suffix_variant, tld));
+        }
+        if prefix_variant.len() <= 63 {
+            variations.push(format!("{}.{}", prefix_variant, tld));
+        }
     }
     
     for num in 1..=100 {
-        variations.push(format!("{}{}.{}", domain, num, tld));
+        let suffix_variant = format!("{}{}", domain, num);
+        if suffix_variant.len() <= 63 {
+            variations.push(format!("{}.{}", suffix_variant, tld));
+        }
     }
     
     variations
@@ -746,9 +1067,20 @@ fn generate_addition(domain: &str, tld: &str) -> Vec<String> {
 fn generate_subdomain_injection(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
     
-    for i in 1..domain.len() {
+    let chars: Vec<char> = domain.chars().collect();
+    for i in 1..chars.len() {
+        // Skip positions that would create consecutive dots
+        if i > 0 && chars[i-1] == '.' {
+            continue;
+        }
+        if i < chars.len() && chars[i] == '.' {
+            continue;
+        }
+        
+        // Convert char index to byte index for insertion
+        let byte_pos = domain.char_indices().nth(i).map(|(pos, _)| pos).unwrap_or(domain.len());
         let mut new_domain = domain.to_string();
-        new_domain.insert(i, '.');
+        new_domain.insert(byte_pos, '.');
         variations.push(format!("{}.{}", new_domain, tld));
     }
     
@@ -804,9 +1136,27 @@ fn generate_vowel_swapping(domain: &str, tld: &str) -> Vec<String> {
 fn generate_hyphenation(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
     
-    for i in 1..domain.len() {
+    let chars: Vec<char> = domain.chars().collect();
+    for i in 1..chars.len() {
+        // Skip positions that would create domains starting/ending with hyphens
+        // or consecutive hyphens
+        if i > 0 && chars[i-1] == '-' {
+            continue;
+        }
+        if i < chars.len() && chars[i] == '-' {
+            continue;
+        }
+        
+        // Convert char index to byte index for insertion
+        let byte_pos = domain.char_indices().nth(i).map(|(pos, _)| pos).unwrap_or(domain.len());
         let mut new_domain = domain.to_string();
-        new_domain.insert(i, '-');
+        new_domain.insert(byte_pos, '-');
+        
+        // Additional check: don't create domains ending with hyphen
+        if new_domain.ends_with('-') {
+            continue;
+        }
+        
         variations.push(format!("{}.{}", new_domain, tld));
     }
     
@@ -815,10 +1165,13 @@ fn generate_hyphenation(domain: &str, tld: &str) -> Vec<String> {
 
 fn generate_omission(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
+    let chars: Vec<char> = domain.chars().collect();
     
-    for i in 0..domain.len() {
-        let mut new_domain = domain.to_string();
-        new_domain.remove(i);
+    for i in 0..chars.len() {
+        let mut new_domain = String::new();
+        new_domain.push_str(&chars[..i].iter().collect::<String>());
+        new_domain.push_str(&chars[i+1..].iter().collect::<String>());
+        
         if !new_domain.is_empty() {
             variations.push(format!("{}.{}", new_domain, tld));
         }
@@ -941,6 +1294,439 @@ fn generate_intl_tld(domain: &str, tld: &str) -> Vec<String> {
     
     for mixed_tld in &mixed_tlds {
         variations.push(format!("{}.{}", domain, mixed_tld));
+    }
+    
+    variations
+}
+
+fn generate_dot_insertion(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Insert dots at various positions within the domain (not at start/end)
+    let chars: Vec<char> = domain.chars().collect();
+    for i in 1..chars.len() {
+        // Skip positions that would create consecutive dots
+        if i > 0 && chars[i-1] == '.' {
+            continue;
+        }
+        if i < chars.len() && chars[i] == '.' {
+            continue;
+        }
+        
+        // Convert char index to byte index for insertion
+        let byte_pos = domain.char_indices().nth(i).map(|(pos, _)| pos).unwrap_or(domain.len());
+        let mut new_domain = domain.to_string();
+        new_domain.insert(byte_pos, '.');
+        variations.push(format!("{}.{}", new_domain, tld));
+    }
+    
+    variations
+}
+
+fn generate_dot_omission(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Remove existing dots from the domain
+    if domain.contains('.') {
+        let stripped = domain.replace(".", "");
+        if !stripped.is_empty() {
+            variations.push(format!("{}.{}", stripped, tld));
+        }
+    }
+    
+    variations
+}
+
+fn generate_dot_hyphen_substitution(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Replace dots with hyphens
+    if domain.contains('.') {
+        let hyphenated = domain.replace(".", "-");
+        variations.push(format!("{}.{}", hyphenated, tld));
+    }
+    
+    // Replace hyphens with dots
+    if domain.contains('-') {
+        let dotted = domain.replace("-", ".");
+        variations.push(format!("{}.{}", dotted, tld));
+    }
+    
+    variations
+}
+
+fn generate_double_character_replacement(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Adjacent keyboard mappings for double character replacement
+    let qwerty_map = [
+        ('q', "wa"), ('w', "qes"), ('e', "wrd"), ('r', "etf"), ('t', "rgy"), ('y', "tuh"), 
+        ('u', "yio"), ('i', "uop"), ('o', "ip"), ('p', "o"),
+        ('a', "qsz"), ('s', "awdz"), ('d', "sefx"), ('f', "dgrc"), ('g', "fthv"), ('h', "gyjb"), 
+        ('j', "hukn"), ('k', "julm"), ('l', "km"), 
+        ('z', "asx"), ('x', "zsdc"), ('c', "xdfv"), ('v', "cfgb"), ('b', "vghn"), ('n', "bhjm"), 
+        ('m', "njk")
+    ];
+    
+    let chars: Vec<char> = domain.chars().collect();
+    
+    for (i, &ch) in chars.iter().enumerate() {
+        // Find adjacent keys and replace with double characters
+        for (orig_char, adjacent_chars) in &qwerty_map {
+            if ch == *orig_char {
+                for adj_char in adjacent_chars.chars() {
+                    let mut new_domain = String::new();
+                    new_domain.push_str(&chars[..i].iter().collect::<String>());
+                    new_domain.push_str(&format!("{}{}", adj_char, adj_char));
+                    new_domain.push_str(&chars[i+1..].iter().collect::<String>());
+                    
+                    if new_domain != domain {
+                        variations.push(format!("{}.{}", new_domain, tld));
+                    }
+                }
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_bidirectional_insertion(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Adjacent keyboard mappings for bidirectional insertion
+    let qwerty_map = [
+        ('q', "wa"), ('w', "qes"), ('e', "wrd"), ('r', "etf"), ('t', "rgy"), ('y', "tuh"), 
+        ('u', "yio"), ('i', "uop"), ('o', "ip"), ('p', "o"),
+        ('a', "qsz"), ('s', "awdz"), ('d', "sefx"), ('f', "dgrc"), ('g', "fthv"), ('h', "gyjb"), 
+        ('j', "hukn"), ('k', "julm"), ('l', "km"), 
+        ('z', "asx"), ('x', "zsdc"), ('c', "xdfv"), ('v', "cfgb"), ('b', "vghn"), ('n', "bhjm"), 
+        ('m', "njk")
+    ];
+    
+    for (char_idx, ch) in domain.chars().enumerate() {
+        // Find adjacent keys for each character
+        for (orig_char, adjacent_chars) in &qwerty_map {
+            if ch == *orig_char {
+                for adj_char in adjacent_chars.chars() {
+                    // Get byte positions for insertion
+                    let char_positions: Vec<_> = domain.char_indices().collect();
+                    let byte_pos_before = char_positions.get(char_idx).map(|(pos, _)| *pos).unwrap_or(domain.len());
+                    let byte_pos_after = char_positions.get(char_idx + 1).map(|(pos, _)| *pos).unwrap_or(domain.len());
+                    
+                    // Insert adjacent character before current character
+                    let mut before_domain = domain.to_string();
+                    before_domain.insert(byte_pos_before, adj_char);
+                    variations.push(format!("{}.{}", before_domain, tld));
+                    
+                    // Insert adjacent character after current character
+                    let mut after_domain = domain.to_string();
+                    after_domain.insert(byte_pos_after, adj_char);
+                    variations.push(format!("{}.{}", after_domain, tld));
+                }
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_cardinal_substitution(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Cardinal number mappings (digit to word and word to digit)
+    let cardinals = [
+        ("0", "zero"), ("1", "one"), ("2", "two"), ("3", "three"), ("4", "four"),
+        ("5", "five"), ("6", "six"), ("7", "seven"), ("8", "eight"), ("9", "nine"),
+        ("10", "ten"), ("11", "eleven"), ("12", "twelve"), ("20", "twenty"),
+        ("30", "thirty"), ("40", "forty"), ("50", "fifty"), ("100", "hundred"),
+    ];
+    
+    // Replace numbers with words
+    for &(digit, word) in &cardinals {
+        if domain.contains(digit) {
+            let word_variant = domain.replace(digit, word);
+            if word_variant != domain {
+                variations.push(format!("{}.{}", word_variant, tld));
+            }
+        }
+        
+        // Replace words with numbers  
+        if domain.contains(word) {
+            let digit_variant = domain.replace(word, digit);
+            if digit_variant != domain {
+                variations.push(format!("{}.{}", digit_variant, tld));
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_ordinal_substitution(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Ordinal number mappings
+    let ordinals = [
+        ("1st", "first"), ("2nd", "second"), ("3rd", "third"), ("4th", "fourth"), ("5th", "fifth"),
+        ("6th", "sixth"), ("7th", "seventh"), ("8th", "eighth"), ("9th", "ninth"), ("10th", "tenth"),
+        ("11th", "eleventh"), ("12th", "twelfth"), ("20th", "twentieth"), ("21st", "twentyfirst"),
+        ("30th", "thirtieth"), ("100th", "hundredth"),
+    ];
+    
+    // Replace ordinal numbers with words
+    for &(ordinal, word) in &ordinals {
+        if domain.contains(ordinal) {
+            let word_variant = domain.replace(ordinal, word);
+            if word_variant != domain {
+                variations.push(format!("{}.{}", word_variant, tld));
+            }
+        }
+        
+        // Replace ordinal words with numbers
+        if domain.contains(word) {
+            let ordinal_variant = domain.replace(word, ordinal);
+            if ordinal_variant != domain {
+                variations.push(format!("{}.{}", ordinal_variant, tld));
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_homophones(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common homophones dictionary
+    let homophones = [
+        ("to", vec!["too", "two"]),
+        ("there", vec!["their", "they're"]),
+        ("your", vec!["you're"]),
+        ("hear", vec!["here"]),
+        ("buy", vec!["by", "bye"]),
+        ("site", vec!["sight", "cite"]),
+        ("right", vec!["write", "rite"]),
+        ("four", vec!["for", "fore"]),
+        ("one", vec!["won"]),
+        ("son", vec!["sun"]),
+        ("no", vec!["know"]),
+        ("sea", vec!["see"]),
+        ("be", vec!["bee"]),
+        ("mail", vec!["male"]),
+        ("sale", vec!["sail"]),
+        ("peace", vec!["piece"]),
+        ("break", vec!["brake"]),
+        ("cell", vec!["sell"]),
+        ("blue", vec!["blew"]),
+        ("ate", vec!["eight"]),
+        ("week", vec!["weak"]),
+        ("meet", vec!["meat"]),
+        ("fair", vec!["fare"]),
+        ("pair", vec!["pear", "pare"]),
+        ("bear", vec!["bare"]),
+        ("dear", vec!["deer"]),
+        ("flour", vec!["flower"]),
+        ("hour", vec!["our"]),
+        ("knight", vec!["night"]),
+        ("knew", vec!["new"]),
+        ("tail", vec!["tale"]),
+        ("wait", vec!["weight"]),
+        ("way", vec!["weigh"]),
+        ("would", vec!["wood"]),
+        ("hole", vec!["whole"]),
+        ("role", vec!["roll"]),
+        ("soul", vec!["sole"]),
+        ("steal", vec!["steel"]),
+        ("heal", vec!["heel"]),
+        ("real", vec!["reel"]),
+        ("read", vec!["red"]),
+        ("lead", vec!["led"]),
+        ("threw", vec!["through"]),
+        ("plain", vec!["plane"]),
+        ("rain", vec!["reign"]),
+        ("main", vec!["mane"]),
+        ("pain", vec!["pane"]),
+        ("vain", vec!["vane"]),
+    ];
+    
+    // Apply homophone transformations
+    for &(original, ref replacements) in &homophones {
+        if domain.to_lowercase().contains(original) {
+            for replacement in replacements {
+                let variant = domain.to_lowercase().replace(original, replacement);
+                if variant != domain.to_lowercase() {
+                    variations.push(format!("{}.{}", variant, tld));
+                }
+            }
+        }
+        
+        // Reverse lookup - replace homophones with original
+        for replacement in replacements {
+            if domain.to_lowercase().contains(replacement) {
+                let variant = domain.to_lowercase().replace(replacement, original);
+                if variant != domain.to_lowercase() {
+                    variations.push(format!("{}.{}", variant, tld));
+                }
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_singular_plural(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Simple pluralization rules
+    let domain_lower = domain.to_lowercase();
+    
+    // Add 's' for simple plural
+    if !domain_lower.ends_with('s') {
+        variations.push(format!("{}s.{}", domain, tld));
+    }
+    
+    // Add 'es' for words ending in s, x, z, sh, ch
+    if domain_lower.ends_with('s') || domain_lower.ends_with('x') || domain_lower.ends_with('z') 
+       || domain_lower.ends_with("sh") || domain_lower.ends_with("ch") {
+        variations.push(format!("{}es.{}", domain, tld));
+    }
+    
+    // Change 'y' to 'ies' 
+    if domain_lower.ends_with('y') && domain.len() > 1 {
+        let stem = &domain[..domain.len()-1];
+        variations.push(format!("{}ies.{}", stem, tld));
+    }
+    
+    // Remove 's' for singular (simple case)
+    if domain_lower.ends_with('s') && domain.len() > 1 {
+        let singular = &domain[..domain.len()-1];
+        variations.push(format!("{}.{}", singular, tld));
+    }
+    
+    // Remove 'es' for singular
+    if domain_lower.ends_with("es") && domain.len() > 2 {
+        let singular = &domain[..domain.len()-2];
+        variations.push(format!("{}.{}", singular, tld));
+    }
+    
+    // Change 'ies' to 'y'
+    if domain_lower.ends_with("ies") && domain.len() > 3 {
+        let singular = format!("{}y", &domain[..domain.len()-3]);
+        variations.push(format!("{}.{}", singular, tld));
+    }
+    
+    variations
+}
+
+fn generate_wrong_sld(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common second-level domains for various countries
+    let slds = [
+        ("uk", vec!["co.uk", "org.uk", "net.uk", "ac.uk", "gov.uk", "sch.uk"]),
+        ("au", vec!["com.au", "net.au", "org.au", "edu.au", "gov.au", "asn.au"]),
+        ("nz", vec!["co.nz", "net.nz", "org.nz", "ac.nz", "govt.nz", "school.nz"]),
+        ("za", vec!["co.za", "net.za", "org.za", "edu.za", "gov.za", "ac.za"]),
+        ("ca", vec!["co.ca", "net.ca", "org.ca", "gc.ca", "ab.ca", "bc.ca"]),
+        ("br", vec!["com.br", "net.br", "org.br", "edu.br", "gov.br", "mil.br"]),
+        ("in", vec!["co.in", "net.in", "org.in", "edu.in", "gov.in", "ac.in"]),
+        ("cn", vec!["com.cn", "net.cn", "org.cn", "edu.cn", "gov.cn", "ac.cn"]),
+        ("jp", vec!["co.jp", "ne.jp", "or.jp", "ac.jp", "go.jp", "ad.jp"]),
+    ];
+    
+    // Generate wrong SLD variants
+    for &(base_tld, ref sld_list) in &slds {
+        if tld == base_tld {
+            for sld in sld_list {
+                variations.push(format!("{}.{}", domain, sld));
+            }
+        } else {
+            for sld in sld_list {
+                if tld == *sld {
+                    variations.push(format!("{}.{}", domain, base_tld));
+                    for other_sld in sld_list {
+                        if *other_sld != *sld {
+                            variations.push(format!("{}.{}", domain, other_sld));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    variations
+}
+
+fn generate_domain_prefix(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common domain prefixes
+    let prefixes = [
+        "www", "mail", "secure", "admin", "test", "dev", "api", "cdn", "auth", "login",
+        "support", "help", "shop", "store", "my", "portal", "mobile", "app", "service",
+        "cloud", "server", "vpn", "security", "monitor", "beta",
+    ];
+    
+    for prefix in &prefixes {
+        variations.push(format!("{}-{}.{}", prefix, domain, tld));
+        variations.push(format!("{}.{}.{}", prefix, domain, tld));
+        variations.push(format!("{}{}.{}", prefix, domain, tld));
+    }
+    
+    variations
+}
+
+fn generate_domain_suffix(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common domain suffixes
+    let suffixes = [
+        "app", "site", "web", "online", "pro", "plus", "premium", "club", "group", "tech",
+        "service", "platform", "security", "media", "shop", "store", "finance", "health",
+        "gaming", "demo", "beta",
+    ];
+    
+    for suffix in &suffixes {
+        variations.push(format!("{}-{}.{}", domain, suffix, tld));
+        variations.push(format!("{}{}.{}", domain, suffix, tld));
+    }
+    
+    variations
+}
+
+fn generate_cyrillic_comprehensive(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Comprehensive Latin to Cyrillic mappings
+    let cyrillic_mappings = [
+        ('a', 'а'), ('c', 'с'), ('e', 'е'), ('o', 'о'), ('p', 'р'), ('x', 'х'), ('y', 'у'),
+        ('i', 'і'), ('j', 'ј'), ('s', 'ѕ'), ('b', 'б'), ('d', 'д'), ('f', 'ф'), ('g', 'г'), 
+        ('h', 'н'), ('k', 'к'), ('l', 'л'), ('m', 'м'), ('n', 'н'), ('r', 'р'), ('t', 'т'), 
+        ('v', 'в'), ('z', 'з'), ('w', 'в'), ('q', 'к'),
+    ];
+    
+    // Single character substitutions
+    for &(latin, cyrillic) in &cyrillic_mappings {
+        let substituted = domain.replace(latin, &cyrillic.to_string());
+        if substituted != domain {
+            variations.push(format!("{}.{}", substituted, tld));
+        }
+    }
+    
+    // Mixed script variations (partial substitution)
+    let chars: Vec<char> = domain.chars().collect();
+    for (i, &ch) in chars.iter().enumerate() {
+        for &(latin, cyrillic) in &cyrillic_mappings {
+            if ch == latin {
+                let mut mixed_chars = chars.clone();
+                mixed_chars[i] = cyrillic;
+                let mixed_domain: String = mixed_chars.into_iter().collect();
+                if mixed_domain != domain {
+                    variations.push(format!("{}.{}", mixed_domain, tld));
+                }
+            }
+        }
     }
     
     variations

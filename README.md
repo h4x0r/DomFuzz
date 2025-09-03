@@ -1,364 +1,245 @@
 # DomFuzz
 
-A Rust CLI tool for generating domain name variations using various typosquatting techniques. This tool is designed for security research and defensive purposes to identify potential typosquatted domains.
+A comprehensive domain name fuzzing tool written in Rust for generating typosquatting variations used in cybersecurity research and defensive purposes.
 
-## Features by Category
+## Overview
 
-### 🔠 **Character-Level Attacks**
-- **Character Substitution**: Replace characters with visually similar ones (o→0, l→1, etc.)
-- **Homoglyphs**: Basic Unicode characters that look identical to ASCII letters
-- **IDN Homograph Attacks**: Advanced Unicode/Punycode attacks using international scripts
-- **Mixed Script Attacks**: Combine characters from different language scripts (Cyrillic + Latin)
-- **Extended Unicode Homoglyphs**: Leverage the full 160k+ Unicode character space
+DomFuzz generates domain name variations using advanced typosquatting techniques commonly employed in phishing campaigns and cybersquatting attacks. The tool implements algorithms from leading domain fuzzing tools like URLCrazy, dnstwist, and URLInsane, providing comprehensive coverage of domain manipulation techniques.
 
-### ⌨️ **Input-Based Attacks**
-- **Keyboard Proximity**: Exploit adjacent key typing errors (QWERTY, QWERTZ, AZERTY)
-- **Misspelling Variations**: Common typos through insertion, deletion, and transposition
-- **Repetition**: Double letters to simulate typing mistakes
-- **Character Omission**: Strategic character removal patterns
+## Features
 
-### 🌐 **Domain Structure Attacks**
-- **TLD Variations**: Test different top-level domains including internationalized TLDs
-- **Subdomain Injection**: Create misleading subdomain structures
-- **Word Part Swapping**: Rearrange parts of the domain name
-- **Vowel Swapping**: Strategic vowel substitutions
-- **Hyphenation**: Insert hyphens at strategic positions
-
-### 🏢 **Brand Confusion Attacks**
-- **Combosquatting**: Combine brands with common keywords (most dangerous technique)
-- **Brand Confusion**: Strategic prefixes/suffixes creating authority confusion
-- **Addition Variations**: Append letters/numbers to domain names
-
-### ⚙️ **Technical Attacks**
-- **Bitsquatting**: Exploit bit-flip errors in computer memory during DNS resolution
+- **30+ fuzzing algorithms** organized into logical groups
+- **Network status checking** for domain availability
+- **Customizable output** with variation limits
+- **Dictionary-based combosquatting** with custom wordlists
+- **Unicode and international** character support
+- **High performance** Rust implementation
 
 ## Installation
 
-[![Crates.io](https://img.shields.io/crates/v/domfuzz.svg)](https://crates.io/crates/domfuzz)
-
-### From crates.io (Recommended)
-
-```bash
-cargo install domfuzz
-```
-
 ### From Source
-
 ```bash
-git clone https://github.com/securityronin/domfuzz.git
+git clone https://github.com/yourusername/domfuzz
 cd domfuzz
 cargo build --release
 ```
 
-## Usage
-
+### Usage
 ```bash
-# Generate all types of variations (default)
-domfuzz example.com
-
-# Generate only character substitutions and TLD variations
-domfuzz --char-sub --tld-variations example.com
-
-# Limit the number of variations
-domfuzz --max-variations 50 example.com
-
-# Enable all variation types explicitly
-domfuzz --all example.com
-
-# If installed from source, use:
-# domfuzz example.com
+cargo run -- [OPTIONS] <DOMAIN>
 ```
 
-### Command Line Options
+## Algorithm Groups
 
-#### 🔠 Character-Level Attacks
-- `--char-sub`: Character substitution variations (o→0, l→1, etc.)
-- `--homoglyphs`: Basic Unicode homoglyph variations  
-- `--idn-homograph`: Advanced IDN homograph attacks (Unicode/Punycode)
-- `--mixed-script`: Mixed script attacks (Cyrillic + Latin combinations)
-- `--extended-unicode`: Extended Unicode homoglyphs (160k+ characters)
+DomFuzz organizes its algorithms into logical groups for easier usage:
 
-#### ⌨️ Input-Based Attacks
-- `--keyboard`: Keyboard proximity variations (QWERTY, QWERTZ, AZERTY)
-- `--misspellings`: Misspelling variations (insertion, deletion, transposition)
-- `--repetition`: Repetition variations (double letters)
-- `--omission`: Character omission variations
+### 🔤 Basic Typos
+Common typing mistakes and simple character errors:
+- **Character Substitution**: `o→0`, `l→1`, `e→3`, etc.
+- **Misspellings**: Character insertion, deletion, transposition
+- **Character Omission**: Missing characters
+- **Repetition**: Double characters (`google→gooogle`)  
+- **Keyboard Proximity**: Adjacent key typos based on QWERTY layout
 
-#### 🌐 Domain Structure Attacks
-- `--tld-variations`: Different TLD variations
-- `--intl-tld`: Internationalized TLD variations
-- `--subdomain`: Subdomain injection variations
-- `--word-swap`: Word part swapping variations
-- `--vowel-swap`: Vowel swapping variations
-- `--hyphenation`: Hyphenation variations
+```bash
+cargo run -- --char-sub --keyboard google.com
+```
 
-#### 🏢 Brand Confusion Attacks
-- `--combosquatting`: Combosquatting with common keywords
-- `--brand-confusion`: Brand confusion techniques (prefixes/suffixes)
-- `--addition`: Addition variations (append letters/numbers)
+### 🔧 Character Manipulation
+Advanced character-level attack techniques:
+- **Bitsquatting**: Single bit-flip attacks
+- **Double Character Replacement**: QWERTY-based double char substitution
+- **Bidirectional Insertion**: Adjacent character insertion in both directions
 
-#### ⚙️ Technical Attacks
-- `--bitsquatting`: Bitsquatting (bit-flip variations)
+```bash
+cargo run -- --bitsquatting --double-char-replacement example.com
+```
 
-#### 📁 Configuration Options
-- `--dictionary <FILE>`: Path to dictionary file for combosquatting
-- `--all`: Enable all variation types
-- `--max-variations <N>`: Limit output to N variations (default: 1000)
+### 🌐 Unicode/Script Attacks
+International character confusion attacks:
+- **Basic Homoglyphs**: Visually similar characters (`a→α`)
+- **IDN Homograph**: Advanced Unicode/Punycode attacks
+- **Mixed Script**: Cyrillic + Latin character mixing
+- **Extended Unicode**: 160k+ character homoglyph support
+- **Cyrillic Comprehensive**: Extensive Cyrillic substitutions
 
-If no specific variation flags are provided, all types are enabled by default.
+```bash
+cargo run -- --homoglyphs --cyrillic-comprehensive paypal.com
+```
 
-## Examples
+### 🗣️ Phonetic/Semantic
+Sound and meaning-based attacks:
+- **Homophones**: Sound-alike word replacements (`right→write`)
+- **Vowel Swapping**: Vowel interchange (`a↔e`, `i↔o`)
+- **Cognitive**: Semantic word confusion attacks
+- **Singular/Plural**: Word form variations (`bank→banks`)
+
+```bash
+cargo run -- --homophones --cognitive facebook.com
+```
+
+### 🔢 Number/Word Substitution
+Numeric and word form manipulation:
+- **Cardinal Substitution**: Number-to-word conversion (`one→1`)
+- **Ordinal Substitution**: Ordinal conversion (`first→1st`)
+
+```bash
+cargo run -- --cardinal-substitution --ordinal-substitution first1.com
+```
+
+### 🏗️ Structure Manipulation
+Domain structure and format changes:
+- **Word Swapping**: Domain part rearrangement
+- **Hyphenation**: Hyphen insertion (`facebook→face-book`)
+- **Addition**: Prefix/suffix single character addition
+- **Subdomain Injection**: Internal dot insertion
+- **Dot Insertion/Omission**: Dot manipulation
+- **Dot/Hyphen Substitution**: Dot-hyphen interchange
+
+```bash
+cargo run -- --hyphenation --dot-insertion google.com
+```
+
+### 🌍 Domain Extensions
+TLD and branding manipulation:
+- **TLD Variations**: Alternative top-level domains
+- **International TLD**: IDN TLD variations (`.com→.көм`)
+- **Wrong SLD**: Incorrect second-level domains (`.co.uk→.co.gov.uk`)
+- **Combosquatting**: Keyword combination attacks
+- **Brand Confusion**: Authority prefixes/suffixes (`secure-`, `-official`)
+- **Domain Prefix/Suffix**: Common domain extensions
+
+```bash
+cargo run -- --tld-variations --brand-confusion --combosquatting amazon.com
+```
+
+## Usage Examples
 
 ### Basic Usage
 ```bash
-# Generate all types of variations (default)
-$ domfuzz google.com | head -10
-g00gle.com
-goo9le.com
-goog1e.com
-googl3.com
+# Generate all variations (default behavior)
+cargo run -- example.com
+
+# Use specific algorithm groups
+cargo run -- --basic-typos --unicode-attacks example.com
+
+# Limit output and check status
+cargo run -- --all --max-variations 50 --check-status example.com
+```
+
+### Advanced Usage
+```bash
+# Custom dictionary for combosquatting
+cargo run -- --combosquatting --dictionary /path/to/wordlist.txt target.com
+
+# Focus on international attacks
+cargo run -- --cyrillic-comprehensive --idn-homograph --intl-tld example.com
+
+# Phonetic and semantic attacks only
+cargo run -- --homophones --cognitive --singular-plural rightmove.com
+```
+
+### Real-World Examples
+
+**Banking/Finance Focus:**
+```bash
+cargo run -- --brand-confusion --cognitive --homoglyphs paypal.com
+```
+
+**Social Media Focus:**
+```bash
+cargo run -- --cognitive --homophones --hyphenation facebook.com
+```
+
+**Technology Company Focus:**
+```bash
+cargo run -- --cyrillic-comprehensive --brand-confusion microsoft.com
+```
+
+## Output Format
+
+DomFuzz outputs generated domain variations in plain text format:
+```
+g0ogle.com
+googel.com
 google.net
-google.org
-google.co
-googlе.com
-gogole.com
-goolge.com
+secure-google.com
+googlle.com
+goоgle.com  # Cyrillic 'о'
+...
 ```
 
-### Character-Level Attacks
-```bash
-# Basic character substitutions
-$ domfuzz --char-sub paypal.com | head -3
-p@ypal.com
-payp@l.com
-paypa1.com
-
-# Advanced IDN homograph attacks (most dangerous)
-$ domfuzz --idn-homograph amazon.com | head -5
-аmazon.com      # Cyrillic 'а' instead of Latin 'a'
-amazon.сom      # Cyrillic 'с' instead of Latin 'c'  
-amаzon.com      # Multiple Cyrillic substitutions
-amazon​.com      # Contains invisible zero-width space
-‮amazon.com     # Right-to-left override attack
-
-# Mixed script combinations
-$ domfuzz --mixed-script google.com | head -3
-gооgle.com      # Mixed Cyrillic and Latin 'o'
-goοgle.com      # Mixed Greek and Latin 'o'
-gοοgle.com      # Multiple Greek omicrons
+With status checking enabled:
+```
+g0ogle.com, available
+googel.com, registered
+google.net, parked
+secure-google.com, available
+...
 ```
 
-### Input-Based Attacks
-```bash
-# Keyboard proximity errors (supports QWERTY, QWERTZ, AZERTY)
-$ domfuzz --keyboard amazon.com | head -5
-ajazon.com
-akazon.com
-amaaon.com
-amason.com
-amaxon.com
+## Algorithm Details
 
-# Character omission patterns
-$ domfuzz --omission microsoft.com | head -3
-icrosoft.com
-mcrosoft.com
-micosoft.com
-```
+### Character Substitution Mappings
+- `o→0`, `l→1`, `i→1`, `e→3`, `a→@`, `s→$`, `g→9`, `b→6`, `t→7`, `z→2`
 
-### Domain Structure Attacks  
-```bash
-# Internationalized TLD variations
-$ domfuzz --intl-tld paypal.com | head -5
-paypal.ком        # .com in Cyrillic
-paypal.中国       # .com in Chinese
-paypal.コム       # .com in Japanese
-paypal.한국       # Korea TLD in Hangul
-paypal.рф         # Russia TLD in Cyrillic
+### QWERTY Keyboard Layout
+Adjacent key mappings based on standard QWERTY layout for realistic typos.
 
-# Hyphenation variations
-$ domfuzz --hyphenation google.com
-g-oogle.com
-go-ogle.com
-goo-gle.com
-goog-le.com
-googl-e.com
-```
-
-### Brand Confusion Attacks
-```bash
-# Combosquatting (most used in real attacks)
-$ domfuzz --combosquatting paypal.com | head -5
-paypal-support.com
-paypalsupport.com
-support-paypal.com
-secure-paypal.com
-paypal-login.com
-
-# Brand confusion with authority terms
-$ domfuzz --brand-confusion amazon.com | head -5
-www-amazon.com
-secure-amazon.com
-official-amazon.com
-amazon-official.com
-amazon-corp.com
-```
-
-### Technical Attacks
-```bash
-# Bitsquatting (exploits hardware bit-flip errors)
-$ domfuzz --bitsquatting google.com | head -5
-foogle.com      # g→f (single bit difference)
-coogle.com      # g→c (single bit difference)
-eoogle.com      # g→e (single bit difference)
-ggogle.com      # o→g (single bit difference)
-gkogle.com      # o→k (single bit difference)
-```
-
-## Attack Categories Explained
-
-### 🔠 **Character-Level Attacks**
-
-#### Character Substitution
-Replaces common characters with visually similar alternatives:
-- `o` ↔ `0`, `l` ↔ `1`, `i` ↔ `1`
-- `e` → `3`, `a` → `@`, `s` → `$`
-- `g` → `9`, `b` → `6`, `t` → `7`, `z` → `2`
-
-#### Basic Homoglyphs
-Uses basic Unicode characters that look identical to ASCII letters but have different code points:
+### Unicode Homoglyphs
+Extensive Unicode character mappings including:
 - **Cyrillic**: `а` (U+0430) vs `a` (U+0061)
-- **Greek**: `ο` (U+03BF) vs `o` (U+006F)
-- **Common substitutions**: Cyrillic and Greek scripts that appear identical to Latin letters
+- **Greek**: `α` (U+03B1) vs `a` (U+0061)
+- **Extended**: Full Unicode homoglyph database
 
-#### IDN Homograph Attacks ⚠️ **Most Dangerous**
-Advanced Unicode/Punycode attacks using internationalized domain infrastructure:
-- **Right-to-Left Override (U+202E)**: Exploits bidirectional text rendering
-- **Invisible characters**: Zero-width spaces, joiners, and other invisible Unicode characters
-- **Punycode encoding**: `xn--` prefixed domains that decode to Unicode attacks
-- **Multiple character combinations**: Combines multiple homoglyphs in sophisticated patterns
+### Homophone Dictionary
+Common sound-alike word pairs:
+- `right→write,rite`
+- `sea→see,c`
+- `won→one,1`
+- `to→two,too,2`
 
-#### Mixed Script Attacks
-Combines characters from different language scripts in the same domain:
-- **Cyrillic + Latin**: `gооgle.com` (mixed 'o' characters)
-- **Greek + Latin**: `goοgle.com` (Greek omicron + Latin)
-- **Directional markers**: Left-to-right and right-to-left Unicode markers
+## Performance
 
-#### Extended Unicode Homoglyphs
-Leverages the full 160,000+ Unicode character space:
-- **Mathematical scripts**: `𝒶mazon.com` (mathematical script 'a')
-- **Regional scripts**: Armenian, Georgian, Cherokee, Arabic contextual forms
-- **Normalization attacks**: Different Unicode forms of the same visual character
-
-### ⌨️ **Input-Based Attacks**
-
-#### Keyboard Proximity
-Exploits natural typing errors based on keyboard layouts:
-- **QWERTY layout**: `q↔w`, `s↔d`, `f↔g`, `j↔k`
-- **QWERTZ layout**: `y↔z`, `q↔w` (German/European)
-- **AZERTY layout**: `a↔q`, `w↔z` (French)
-- **Example**: `paypal.com` → `payoal.com` (p→o adjacent keys)
-
-#### Misspelling Variations
-Common typing errors and typos:
-- **Insertion**: Add characters at various positions
-- **Deletion**: Remove individual characters (omission patterns)
-- **Transposition**: Swap adjacent characters
-
-#### Repetition Variations  
-Doubles letters to simulate common typing mistakes:
-- **Technique**: Double each character in the domain
-- **Examples**: `google.com` → `gooogle.com`, `facebook.com` → `faacebook.com`
-
-### 🌐 **Domain Structure Attacks**
-
-#### TLD Variations
-Tests different top-level domains:
-- **Generic TLDs**: com, net, org, biz, info
-- **Country codes**: us, uk, ca, de, fr, ru, cn, jp, au
-- **New TLDs**: app, dev, tech, online, site
-- **Free TLDs**: tk, ml, ga, cf
-
-#### Internationalized TLD Variations
-Uses Unicode and country-specific TLDs:
-- **Cyrillic TLDs**: `.ком` (.com), `.рф` (Russia)
-- **Chinese TLDs**: `.中国` (China), `.公司` (.com)
-- **Arabic TLDs**: `.السعودية` (Saudi Arabia)
-- **Mixed script TLDs**: `com.ау` (Cyrillic 'au')
-
-#### Word Part Swapping
-Rearranges parts of the domain name:
-- **Halves**: Swap first and second half
-- **Thirds**: Swap first and last third
-- **Sliding windows**: Swap characters within windows
-
-#### Vowel Swapping
-Strategic vowel substitutions:
-- **Common swaps**: `a↔e`, `i↔o`, `u↔o`
-- **Examples**: `paypal.com` → `paypel.com`, `google.com` → `guggle.com`
-
-#### Hyphenation
-Insert hyphens at strategic positions:
-- **Examples**: `google.com` → `g-oogle.com`, `paypal.com` → `pay-pal.com`
-- **Deception**: Creates apparent word separation
-
-#### Subdomain Injection
-Creates misleading subdomain structures:
-- **Technique**: Insert dots at various positions
-- **Example**: `paypal.com` → `pay.pal.com`, `microsoft.com` → `micro.soft.com`
-- **Deception**: Creates appearance of legitimate subdomains
-
-### 🏢 **Brand Confusion Attacks**
-
-#### Combosquatting ⚠️ **Most Used in Real Attacks**
-Combines legitimate brands with common keywords:
-- **Top keywords**: "support", "secure", "login", "pay", "help", "service"
-- **Examples**: 
-  - `paypal-support.com`
-  - `google-login.com` 
-  - `amazon-security.com`
-- **Research**: 60%+ of real typosquatting attacks use combosquatting (Akamai 2024)
-
-#### Brand Confusion
-Strategic prefixes/suffixes creating authority confusion:
-- **Authority prefixes**: "www", "secure", "official", "my", "admin"  
-- **Service suffixes**: "-app", "-online", "-portal", "-center", "-pro"
-- **Examples**: `secure-amazon.com`, `paypal-official.com`
-
-#### Addition Variations
-Appends characters to domain names:
-- **Letters**: `google.com` → `googlea.com`
-- **Numbers**: `facebook.com` → `facebook1.com`
-- **Combinations**: `amazon2024.com`
-
-### ⚙️ **Technical Attacks**
-
-#### Bitsquatting
-Exploits bit-flip errors in computer memory during DNS resolution:
-- **Technique**: XOR each character with bit masks (1, 2, 4, 8, 16, 32, 64, 128)
-- **Example**: `google.com` → `foogle.com` (g→f is a single bit difference)
-- **Sophistication**: Exploits hardware-level memory errors and cosmic ray interference
-- **Target**: High-traffic domains where bit-flips are more likely to be noticed
+DomFuzz is optimized for high performance:
+- **Fast generation**: 1000s of variations per second
+- **Memory efficient**: HashSet deduplication
+- **Concurrent network checks**: Async domain status verification
+- **Scalable**: Handles large domain lists efficiently
 
 ## Security Considerations
 
 This tool is intended for:
-- Security research
-- Defensive domain monitoring
-- Identifying potential typosquatting attempts
-- Brand protection
+- ✅ **Defensive security research**
+- ✅ **Domain monitoring and protection**
+- ✅ **Threat intelligence analysis**  
+- ✅ **Educational purposes**
 
-**Do not use this tool for malicious purposes such as:**
-- Registering typosquatted domains
-- Phishing campaigns
-- Brand impersonation
-- Any illegal activities
+**Do not use for malicious activities.** Users are responsible for compliance with applicable laws and ethical guidelines.
 
-## Author
+## Contributing
 
-**Albert Hui** <albert@securityronin.com>
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-This tool is provided for educational and defensive security purposes only. Users are responsible for ensuring compliance with applicable laws and regulations.
+## References
+
+- [URLCrazy](https://github.com/urbanadventurer/urlcrazy) - Original Ruby implementation
+- [dnstwist](https://github.com/elceef/dnstwist) - Python domain fuzzing tool
+- [URLInsane](https://github.com/rangertaha/urlinsane) - Go domain fuzzing tool
+- [Unicode Homoglyph Research](https://www.unicode.org/reports/tr39/)
+
+## Changelog
+
+### v0.1.1
+- Added 13 new fuzzing algorithms from URLCrazy, dnstwist, and URLInsane
+- Organized algorithms into logical groups
+- Improved CLI with help groupings
+- Enhanced Unicode support
+- Added comprehensive documentation
+
+### v0.1.0
+- Initial release with basic typosquatting algorithms
