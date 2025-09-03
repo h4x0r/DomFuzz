@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/securityronin/domfuzz"
 keywords = ["security", "typosquatting", "domains", "cybersecurity", "phishing"]
 categories = ["command-line-utilities", "security"]
+exclude = ["target/"]
 
 [[bin]]
 name = "domfuzz"
