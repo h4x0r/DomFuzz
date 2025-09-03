@@ -1,0 +1,2783 @@
+use clap::Parser;
+use std::collections::HashSet;
+
+#[derive(Parser)]
+#[command(name = "domfuzz")]
+#[command(about = "Generate domain name variations for typosquatting research")]
+struct Cli {
+    /// Domain name to generate variations for
+    domain: String,
+    
+    /// Enable character substitution variations (o->0, etc.)
+    #[arg(long)]
+    char_sub: bool,
+    
+    /// Enable homoglyph variations
+    #[arg(long)]
+    homoglyphs: bool,
+    
+    /// Enable misspelling variations (insertion, deletion, transposition)
+    #[arg(long)]
+    misspellings: bool,
+    
+    /// Enable TLD variations
+    #[arg(long)]
+    tld_variations: bool,
+    
+    /// Enable word part swapping
+    #[arg(long)]
+    word_swap: bool,
+    
+    /// Enable bitsquatting (bit-flip variations)
+    #[arg(long)]
+    bitsquatting: bool,
+    
+    /// Enable keyboard proximity variations
+    #[arg(long)]
+    keyboard: bool,
+    
+    /// Enable repetition variations (double letters)
+    #[arg(long)]
+    repetition: bool,
+    
+    /// Enable addition variations (append letters)
+    #[arg(long)]
+    addition: bool,
+    
+    /// Enable subdomain injection
+    #[arg(long)]
+    subdomain: bool,
+    
+    /// Enable combosquatting with common keywords
+    #[arg(long)]
+    combosquatting: bool,
+    
+    /// Enable vowel swapping variations
+    #[arg(long)]
+    vowel_swap: bool,
+    
+    /// Enable hyphenation variations
+    #[arg(long)]
+    hyphenation: bool,
+    
+    /// Enable character omission variations
+    #[arg(long)]
+    omission: bool,
+    
+    /// Enable IDN homograph attacks (Unicode/Punycode)
+    #[arg(long)]
+    idn_homograph: bool,
+    
+    /// Enable mixed script attacks (Cyrillic + Latin, etc.)
+    #[arg(long)]
+    mixed_script: bool,
+    
+    /// Enable extended Unicode homoglyphs (160k+ characters)
+    #[arg(long)]
+    extended_unicode: bool,
+    
+    /// Enable brand confusion techniques  
+    #[arg(long)]
+    brand_confusion: bool,
+    
+    /// Enable internationalized TLD variations
+    #[arg(long)]
+    intl_tld: bool,
+    
+    /// Path to dictionary file for combosquatting
+    #[arg(long, value_name = "FILE")]
+    dictionary: Option<String>,
+    
+    /// Enable all variation types (default if none specified)
+    #[arg(long)]
+    all: bool,
+    
+    /// Maximum number of variations to generate
+    #[arg(short, long, default_value_t = 1000)]
+    max_variations: usize,
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn main() {
+    let cli = Cli::parse();
+    
+    let mut variations = HashSet::new();
+    let (domain_name, tld) = parse_domain(&cli.domain);
+    
+    // If no specific flags are set, enable all by default
+    let enable_all = cli.all || (!cli.char_sub && !cli.homoglyphs && !cli.misspellings && !cli.tld_variations && !cli.word_swap && !cli.bitsquatting && !cli.keyboard && !cli.repetition && !cli.addition && !cli.subdomain && !cli.combosquatting && !cli.vowel_swap && !cli.hyphenation && !cli.omission && !cli.idn_homograph && !cli.mixed_script && !cli.extended_unicode && !cli.brand_confusion && !cli.intl_tld);
+    
+    // Generate variations
+    if cli.char_sub || enable_all {
+        variations.extend(generate_char_substitutions(&domain_name, &tld));
+    }
+    
+    if cli.homoglyphs || enable_all {
+        variations.extend(generate_homoglyphs(&domain_name, &tld));
+    }
+    
+    if cli.misspellings || enable_all {
+        variations.extend(generate_misspellings(&domain_name, &tld));
+    }
+    
+    if cli.tld_variations || enable_all {
+        variations.extend(generate_tld_variations(&domain_name, &tld));
+    }
+    
+    if cli.word_swap || enable_all {
+        variations.extend(generate_word_swaps(&domain_name, &tld));
+    }
+    
+    if cli.bitsquatting || enable_all {
+        variations.extend(generate_bitsquatting(&domain_name, &tld));
+    }
+    
+    if cli.keyboard || enable_all {
+        variations.extend(generate_keyboard_variations(&domain_name, &tld));
+    }
+    
+    if cli.repetition || enable_all {
+        variations.extend(generate_repetition(&domain_name, &tld));
+    }
+    
+    if cli.addition || enable_all {
+        variations.extend(generate_addition(&domain_name, &tld));
+    }
+    
+    if cli.subdomain || enable_all {
+        variations.extend(generate_subdomain_injection(&domain_name, &tld));
+    }
+    
+    if cli.combosquatting || enable_all {
+        let dict_words = if let Some(dict_file) = &cli.dictionary {
+            load_dictionary(dict_file)
+        } else {
+            Vec::new()
+        };
+        variations.extend(generate_combosquatting(&domain_name, &tld, &dict_words));
+    }
+    
+    if cli.vowel_swap || enable_all {
+        variations.extend(generate_vowel_swapping(&domain_name, &tld));
+    }
+    
+    if cli.hyphenation || enable_all {
+        variations.extend(generate_hyphenation(&domain_name, &tld));
+    }
+    
+    if cli.omission || enable_all {
+        variations.extend(generate_omission(&domain_name, &tld));
+    }
+    
+    if cli.idn_homograph || enable_all {
+        variations.extend(generate_idn_homograph(&domain_name, &tld));
+    }
+    
+    if cli.mixed_script || enable_all {
+        variations.extend(generate_mixed_script(&domain_name, &tld));
+    }
+    
+    if cli.extended_unicode || enable_all {
+        variations.extend(generate_extended_unicode(&domain_name, &tld));
+    }
+    
+    if cli.brand_confusion || enable_all {
+        variations.extend(generate_brand_confusion(&domain_name, &tld));
+    }
+    
+    if cli.intl_tld || enable_all {
+        variations.extend(generate_intl_tld(&domain_name, &tld));
+    }
+    
+    // Output results
+    let mut sorted_variations: Vec<_> = variations.into_iter().collect();
+    sorted_variations.sort();
+    
+    for (i, variation) in sorted_variations.iter().take(cli.max_variations).enumerate() {
+        println!("{}", variation);
+        if i >= cli.max_variations - 1 {
+            break;
+        }
+    }
+    
+    eprintln!("Generated {} variations", sorted_variations.len().min(cli.max_variations));
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn parse_domain(domain: &str) -> (String, String) {
+    let domain = domain.trim_start_matches("http://").trim_start_matches("https://");
+    
+    if let Some(dot_pos) = domain.rfind('.') {
+        let name = domain[..dot_pos].to_string();
+        let tld = domain[dot_pos + 1..].to_string();
+        (name, tld)
+    } else {
+        (domain.to_string(), "com".to_string())
+    }
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_char_substitutions(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Character substitution mappings
+    let substitutions = vec![
+        ('o', '0'), ('0', 'o'), ('l', '1'), ('1', 'l'),
+        ('i', '1'), ('e', '3'), ('a', '@'), ('s', '$'),
+        ('g', '9'), ('b', '6'), ('t', '7'), ('z', '2'),
+    ];
+    
+    for (original, replacement) in substitutions {
+        if domain.contains(original) {
+            let modified = domain.replace(original, &replacement.to_string());
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_homoglyphs(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Comprehensive Unicode homoglyphs based on IronGeek's research
+    let homoglyph_map = get_homoglyph_mappings();
+    
+    // Generate single character substitutions
+    for (original_char, homoglyphs) in &homoglyph_map {
+        if domain.contains(*original_char) {
+            for &homoglyph in homoglyphs {
+                let modified = domain.replace(*original_char, &homoglyph.to_string());
+                if modified != domain {
+                    variations.push(format!("{}.{}", modified, tld));
+                }
+            }
+        }
+    }
+    
+    // Generate combinations with multiple homoglyphs
+    let domain_chars: Vec<char> = domain.chars().collect();
+    for i in 0..domain_chars.len() {
+        let current_char = domain_chars[i];
+        if let Some(homoglyphs) = homoglyph_map.get(&current_char) {
+            for &homoglyph in homoglyphs {
+                // Try combining with another homoglyph in the same domain
+                for j in (i+1)..domain_chars.len() {
+                    let second_char = domain_chars[j];
+                    if let Some(second_homoglyphs) = homoglyph_map.get(&second_char) {
+                        for &second_homoglyph in second_homoglyphs {
+                            let mut modified_chars = domain_chars.clone();
+                            modified_chars[i] = homoglyph;
+                            modified_chars[j] = second_homoglyph;
+                            let modified: String = modified_chars.into_iter().collect();
+                            if modified != domain {
+                                variations.push(format!("{}.{}", modified, tld));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override variants (U+202E)
+    variations.push(format!("{}{}.{}", '\u{202E}', domain, tld)); // RTL Override
+    
+    // Add mixed script combinations (dangerous for IDN spoofing)
+    let mixed_script_chars = ['а', 'с', 'е', 'о', 'р', 'х', 'у']; // Cyrillic that look like Latin
+    for &cyrillic_char in &mixed_script_chars {
+        let latin_equivalent = match cyrillic_char {
+            'а' => 'a', 'с' => 'c', 'е' => 'e', 'о' => 'o', 
+            'р' => 'p', 'х' => 'x', 'у' => 'y', _ => continue,
+        };
+        if domain.contains(latin_equivalent) {
+            let modified = domain.replace(latin_equivalent, &cyrillic_char.to_string());
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    // Add invisible character variations (zero-width characters)
+    let invisible_chars = ['\u{200B}', '\u{200C}', '\u{200D}', '\u{FEFF}']; // ZWSP, ZWNJ, ZWJ, ZWNBSP
+    for &invisible_char in &invisible_chars {
+        // Insert invisible character at various positions
+        for i in 0..=domain.len() {
+            let mut modified = String::new();
+            modified.push_str(&domain[..i]);
+            modified.push(invisible_char);
+            modified.push_str(&domain[i..]);
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn get_homoglyph_mappings() -> std::collections::HashMap<char, Vec<char>> {
+    let mut map = std::collections::HashMap::new();
+    
+    // Based on IronGeek's comprehensive homoglyph table
+    map.insert('a', vec!['à', 'á', 'â', 'ã', 'ä', 'å', 'ɑ', 'α', 'а', 'ａ']);
+    map.insert('b', vec!['ß', 'ʙ', 'β', 'в', 'ь', 'ᛒ', 'ｂ']);
+    map.insert('c', vec!['ϲ', 'с', 'ⅽ', 'ｃ']);
+    map.insert('d', vec!['ď', 'đ', 'ԁ', 'ժ', 'ḍ', 'ⅾ', 'ｄ']);
+    map.insert('e', vec!['è', 'é', 'ê', 'ë', 'ē', 'ĕ', 'ė', 'ę', 'ě', 'е', 'ｅ']);
+    map.insert('f', vec!['ſ', 'ｆ']);
+    map.insert('g', vec!['ɡ', 'ɢ', 'ԍ', 'ｇ']);
+    map.insert('h', vec!['ʜ', 'η', 'н', 'һ', 'ｈ']);
+    map.insert('i', vec!['ι', 'і', 'ا', 'ⅰ', 'ｉ', '1', 'l', 'I']);
+    map.insert('j', vec!['ϳ', 'ј', 'յ', 'ｊ']);
+    map.insert('k', vec!['κ', 'к', 'ｋ']);
+    map.insert('l', vec!['ʟ', 'ι', 'ا', 'ⅼ', 'ｌ', '1', 'i', 'I']);
+    map.insert('m', vec!['μ', 'м', 'ⅿ', 'ｍ']);
+    map.insert('n', vec!['ɴ', 'ν', 'п', 'ո', 'ｎ']);
+    map.insert('o', vec!['ο', 'о', 'օ', '0', 'ｏ', 'О', 'Ο']);
+    map.insert('p', vec!['ρ', 'р', 'ｐ']);
+    map.insert('q', vec!['ԛ', 'ｑ']);
+    map.insert('r', vec!['ʀ', 'г', 'ｒ']);
+    map.insert('s', vec!['ѕ', 'ꜱ', 'ｓ']);
+    map.insert('t', vec!['τ', 'т', 'ｔ']);
+    map.insert('u', vec!['μ', 'υ', 'ա', 'ս', 'ｕ']);
+    map.insert('v', vec!['ν', 'ѵ', 'ⅴ', 'ｖ']);
+    map.insert('w', vec!['ѡ', 'ԝ', 'ｗ']);
+    map.insert('x', vec!['χ', 'х', 'ⅹ', 'ｘ']);
+    map.insert('y', vec!['ʏ', 'υ', 'γ', 'у', 'ү', 'ｙ']);
+    map.insert('z', vec!['ζ', 'ｚ']);
+    
+    // Numbers
+    map.insert('0', vec!['о', 'ο', 'օ', 'ｏ', 'О', 'Ο']);
+    map.insert('1', vec!['ⅰ', 'ι', 'і', 'ا', 'l', 'I', 'i']);
+    map.insert('2', vec!['２']);
+    map.insert('3', vec!['３']);
+    map.insert('4', vec!['４']);
+    map.insert('5', vec!['５']);
+    map.insert('6', vec!['６']);
+    map.insert('7', vec!['７']);
+    map.insert('8', vec!['８']);
+    map.insert('9', vec!['９']);
+    
+    // Special characters and punctuation
+    map.insert('-', vec!['‐', '－', '−']);
+    map.insert('.', vec!['٠', '۔', '․', '‧', '。', '．', '｡']);
+    map.insert('/', vec!['⁄', '∕', '╱', '／', 'ﾉ']);
+    
+    map
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_misspellings(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    let chars: Vec<char> = domain.chars().collect();
+    
+    // Character insertion - more targeted than before
+    let common_chars = "aeiouynstrldmchpgbfkwvxzjq";
+    for i in 0..=chars.len() {
+        for c in common_chars.chars() {
+            let mut new_chars = chars.clone();
+            new_chars.insert(i, c);
+            let modified: String = new_chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    // Character deletion (omission) - same as our omission function but included for completeness
+    for i in 0..chars.len() {
+        let mut new_chars = chars.clone();
+        new_chars.remove(i);
+        if !new_chars.is_empty() {
+            let modified: String = new_chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    // Character transposition (swapping adjacent characters) - enhanced version
+    for i in 0..chars.len().saturating_sub(1) {
+        // Only swap if characters are different (like DomainFuzz)
+        if chars[i] != chars[i + 1] {
+            let mut new_chars = chars.clone();
+            new_chars.swap(i, i + 1);
+            let modified: String = new_chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_tld_variations(domain: &str, original_tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common TLDs for typosquatting
+    let tlds = vec![
+        "com", "net", "org", "co", "io", "me", "biz", "info", "us", "uk",
+        "ca", "de", "fr", "ru", "cn", "jp", "au", "in", "br", "mx",
+        "tk", "ml", "ga", "cf", "app", "dev", "tech", "online", "site",
+        "gov", "edu", "mil", "int", "aero", "coop", "museum", "name",
+        "pro", "travel", "jobs", "mobi", "tel", "xxx", "post", "asia",
+        "cat", "eu", "ly", "gd", "ws", "tv", "cc", "la", "mn", "tw"
+    ];
+    
+    for tld in tlds {
+        if tld != original_tld {
+            variations.push(format!("{}.{}", domain, tld));
+        }
+    }
+    
+    // Advanced TLD variations from DomainFuzz
+    if original_tld.contains('.') {
+        // Split compound TLDs like co.uk, com.au
+        let parts: Vec<&str> = original_tld.split('.').collect();
+        if parts.len() == 2 {
+            // Use just the last part (uk from co.uk)
+            variations.push(format!("{}.{}", domain, parts[1]));
+            // Use without the dot (couk from co.uk)
+            variations.push(format!("{}{}.{}", domain, original_tld.replace('.', ""), parts[1]));
+        }
+    } else {
+        // Create compound version (com.com from com)
+        variations.push(format!("{}{}.{}", domain, original_tld, original_tld));
+    }
+    
+    if original_tld != "com" && !original_tld.contains('.') {
+        // Add -tld.com variation (domain-uk.com from domain.uk)
+        variations.push(format!("{}-{}.com", domain, original_tld));
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_word_swaps(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    if domain.len() < 4 {
+        return variations;
+    }
+    
+    // Swap parts of the domain
+    let len = domain.len();
+    let mid = len / 2;
+    
+    // Split domain in half and swap
+    if mid > 0 && mid < len {
+        let first_half = &domain[..mid];
+        let second_half = &domain[mid..];
+        variations.push(format!("{}{}.{}", second_half, first_half, tld));
+    }
+    
+    // Swap first and last third
+    if len >= 6 {
+        let third = len / 3;
+        let first_third = &domain[..third];
+        let middle = &domain[third..len-third];
+        let last_third = &domain[len-third..];
+        variations.push(format!("{}{}{}.{}", last_third, middle, first_third, tld));
+    }
+    
+    // Random character swaps within substrings
+    for window_size in 3..=5 {
+        if window_size <= domain.len() {
+            for start in 0..=(domain.len() - window_size) {
+                let mut chars: Vec<char> = domain.chars().collect();
+                // Swap first and last character of the window
+                chars.swap(start, start + window_size - 1);
+                let modified: String = chars.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_bitsquatting(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    let masks = [1u8, 2, 4, 8, 16, 32, 64, 128];
+    
+    for (i, byte) in domain.bytes().enumerate() {
+        for &mask in &masks {
+            let flipped = byte ^ mask;
+            // Only include valid characters (alphanumeric and hyphen)
+            if (flipped >= b'0' && flipped <= b'9') 
+                || (flipped >= b'a' && flipped <= b'z') 
+                || flipped == b'-' {
+                let chars: Vec<char> = domain.chars().collect();
+                if i < chars.len() {
+                    let mut new_chars = chars;
+                    new_chars[i] = flipped as char;
+                    let new_domain: String = new_chars.into_iter().collect();
+                    if new_domain != domain {
+                        variations.push(format!("{}.{}", new_domain, tld));
+                    }
+                }
+            }
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_keyboard_variations(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Multiple keyboard layouts (QWERTY, QWERTZ, AZERTY)
+    let keyboards = vec![
+        get_qwerty_proximity(),
+        get_qwertz_proximity(),
+        get_azerty_proximity()
+    ];
+    
+    let domain_chars: Vec<char> = domain.chars().collect();
+    
+    for keyboard in keyboards {
+        // Replacement variations (substitute with adjacent keys)
+        for i in 0..domain_chars.len() {
+            let current_char = domain_chars[i];
+            if let Some(adjacent_chars) = keyboard.get(&current_char) {
+                for &replacement in adjacent_chars {
+                    let mut new_chars = domain_chars.clone();
+                    new_chars[i] = replacement;
+                    let modified: String = new_chars.into_iter().collect();
+                    if modified != domain {
+                        variations.push(format!("{}.{}", modified, tld));
+                    }
+                }
+            }
+        }
+        
+        // Insertion variations (insert adjacent keys)
+        for i in 1..domain_chars.len() {
+            let current_char = domain_chars[i];
+            if let Some(adjacent_chars) = keyboard.get(&current_char) {
+                for &insertion in adjacent_chars {
+                    // Insert before current character
+                    let mut new_chars = domain_chars.clone();
+                    new_chars.insert(i, insertion);
+                    let modified: String = new_chars.into_iter().collect();
+                    variations.push(format!("{}.{}", modified, tld));
+                    
+                    // Insert after current character  
+                    let mut new_chars = domain_chars.clone();
+                    new_chars.insert(i + 1, insertion);
+                    let modified: String = new_chars.into_iter().collect();
+                    variations.push(format!("{}.{}", modified, tld));
+                }
+            }
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn get_qwerty_proximity() -> std::collections::HashMap<char, Vec<char>> {
+    let mut map = std::collections::HashMap::new();
+    
+    // Based on DomainFuzz QWERTY layout
+    map.insert('1', vec!['2', 'q']);
+    map.insert('2', vec!['3', 'w', 'q', '1']);
+    map.insert('3', vec!['4', 'e', 'w', '2']);
+    map.insert('4', vec!['5', 'r', 'e', '3']);
+    map.insert('5', vec!['6', 't', 'r', '4']);
+    map.insert('6', vec!['7', 'y', 't', '5']);
+    map.insert('7', vec!['8', 'u', 'y', '6']);
+    map.insert('8', vec!['9', 'i', 'u', '7']);
+    map.insert('9', vec!['0', 'o', 'i', '8']);
+    map.insert('0', vec!['p', 'o', '9']);
+    
+    map.insert('q', vec!['1', '2', 'w', 'a']);
+    map.insert('w', vec!['3', 'e', 's', 'a', 'q', '2']);
+    map.insert('e', vec!['4', 'r', 'd', 's', 'w', '3']);
+    map.insert('r', vec!['5', 't', 'f', 'd', 'e', '4']);
+    map.insert('t', vec!['6', 'y', 'g', 'f', 'r', '5']);
+    map.insert('y', vec!['7', 'u', 'h', 'g', 't', '6']);
+    map.insert('u', vec!['8', 'i', 'j', 'h', 'y', '7']);
+    map.insert('i', vec!['9', 'o', 'k', 'j', 'u', '8']);
+    map.insert('o', vec!['0', 'p', 'l', 'k', 'i', '9']);
+    map.insert('p', vec!['l', 'o', '0']);
+    
+    map.insert('a', vec!['q', 'w', 's', 'z']);
+    map.insert('s', vec!['e', 'd', 'x', 'z', 'a', 'w']);
+    map.insert('d', vec!['r', 'f', 'c', 'x', 's', 'e']);
+    map.insert('f', vec!['t', 'g', 'v', 'c', 'd', 'r']);
+    map.insert('g', vec!['y', 'h', 'b', 'v', 'f', 't']);
+    map.insert('h', vec!['u', 'j', 'n', 'b', 'g', 'y']);
+    map.insert('j', vec!['i', 'k', 'm', 'n', 'h', 'u']);
+    map.insert('k', vec!['o', 'l', 'm', 'j', 'i']);
+    map.insert('l', vec!['k', 'o', 'p']);
+    
+    map.insert('z', vec!['a', 's', 'x']);
+    map.insert('x', vec!['z', 's', 'd', 'c']);
+    map.insert('c', vec!['x', 'd', 'f', 'v']);
+    map.insert('v', vec!['c', 'f', 'g', 'b']);
+    map.insert('b', vec!['v', 'g', 'h', 'n']);
+    map.insert('n', vec!['b', 'h', 'j', 'm']);
+    map.insert('m', vec!['n', 'j', 'k']);
+    
+    map
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn get_qwertz_proximity() -> std::collections::HashMap<char, Vec<char>> {
+    let mut map = std::collections::HashMap::new();
+    
+    // QWERTZ keyboard layout (German/Austrian)
+    map.insert('1', vec!['2', 'q']);
+    map.insert('2', vec!['3', 'w', 'q', '1']);
+    map.insert('3', vec!['4', 'e', 'w', '2']);
+    map.insert('4', vec!['5', 'r', 'e', '3']);
+    map.insert('5', vec!['6', 't', 'r', '4']);
+    map.insert('6', vec!['7', 'z', 't', '5']);
+    map.insert('7', vec!['8', 'u', 'z', '6']);
+    map.insert('8', vec!['9', 'i', 'u', '7']);
+    map.insert('9', vec!['0', 'o', 'i', '8']);
+    map.insert('0', vec!['p', 'o', '9']);
+    
+    map.insert('q', vec!['1', '2', 'w', 'a']);
+    map.insert('w', vec!['3', 'e', 's', 'a', 'q', '2']);
+    map.insert('e', vec!['4', 'r', 'd', 's', 'w', '3']);
+    map.insert('r', vec!['5', 't', 'f', 'd', 'e', '4']);
+    map.insert('t', vec!['6', 'z', 'g', 'f', 'r', '5']);
+    map.insert('z', vec!['7', 'u', 'h', 'g', 't', '6']);
+    map.insert('u', vec!['8', 'i', 'j', 'h', 'z', '7']);
+    map.insert('i', vec!['9', 'o', 'k', 'j', 'u', '8']);
+    map.insert('o', vec!['0', 'p', 'l', 'k', 'i', '9']);
+    map.insert('p', vec!['l', 'o', '0']);
+    
+    map.insert('a', vec!['q', 'w', 's', 'y']);
+    map.insert('s', vec!['e', 'd', 'x', 'y', 'a', 'w']);
+    map.insert('d', vec!['r', 'f', 'c', 'x', 's', 'e']);
+    map.insert('f', vec!['t', 'g', 'v', 'c', 'd', 'r']);
+    map.insert('g', vec!['z', 'h', 'b', 'v', 'f', 't']);
+    map.insert('h', vec!['u', 'j', 'n', 'b', 'g', 'z']);
+    map.insert('j', vec!['i', 'k', 'm', 'n', 'h', 'u']);
+    map.insert('k', vec!['o', 'l', 'm', 'j', 'i']);
+    map.insert('l', vec!['k', 'o', 'p']);
+    
+    map.insert('y', vec!['a', 's', 'x']);
+    map.insert('x', vec!['y', 's', 'd', 'c']);
+    map.insert('c', vec!['x', 'd', 'f', 'v']);
+    map.insert('v', vec!['c', 'f', 'g', 'b']);
+    map.insert('b', vec!['v', 'g', 'h', 'n']);
+    map.insert('n', vec!['b', 'h', 'j', 'm']);
+    map.insert('m', vec!['n', 'j', 'k']);
+    
+    map
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn get_azerty_proximity() -> std::collections::HashMap<char, Vec<char>> {
+    let mut map = std::collections::HashMap::new();
+    
+    // AZERTY keyboard layout (French)
+    map.insert('1', vec!['2', 'a']);
+    map.insert('2', vec!['3', 'z', 'a', '1']);
+    map.insert('3', vec!['4', 'e', 'z', '2']);
+    map.insert('4', vec!['5', 'r', 'e', '3']);
+    map.insert('5', vec!['6', 't', 'r', '4']);
+    map.insert('6', vec!['7', 'y', 't', '5']);
+    map.insert('7', vec!['8', 'u', 'y', '6']);
+    map.insert('8', vec!['9', 'i', 'u', '7']);
+    map.insert('9', vec!['0', 'o', 'i', '8']);
+    map.insert('0', vec!['p', 'o', '9']);
+    
+    map.insert('a', vec!['2', 'z', 'q', '1']);
+    map.insert('z', vec!['3', 'e', 's', 'q', 'a', '2']);
+    map.insert('e', vec!['4', 'r', 'd', 's', 'z', '3']);
+    map.insert('r', vec!['5', 't', 'f', 'd', 'e', '4']);
+    map.insert('t', vec!['6', 'y', 'g', 'f', 'r', '5']);
+    map.insert('y', vec!['7', 'u', 'h', 'g', 't', '6']);
+    map.insert('u', vec!['8', 'i', 'j', 'h', 'y', '7']);
+    map.insert('i', vec!['9', 'o', 'k', 'j', 'u', '8']);
+    map.insert('o', vec!['0', 'p', 'l', 'k', 'i', '9']);
+    map.insert('p', vec!['l', 'o', '0', 'm']);
+    
+    map.insert('q', vec!['z', 's', 'w', 'a']);
+    map.insert('s', vec!['e', 'd', 'x', 'w', 'q', 'z']);
+    map.insert('d', vec!['r', 'f', 'c', 'x', 's', 'e']);
+    map.insert('f', vec!['t', 'g', 'v', 'c', 'd', 'r']);
+    map.insert('g', vec!['y', 'h', 'b', 'v', 'f', 't']);
+    map.insert('h', vec!['u', 'j', 'n', 'b', 'g', 'y']);
+    map.insert('j', vec!['i', 'k', 'n', 'h', 'u']);
+    map.insert('k', vec!['o', 'l', 'j', 'i']);
+    map.insert('l', vec!['k', 'o', 'p', 'm']);
+    map.insert('m', vec!['l', 'p']);
+    
+    map.insert('w', vec!['s', 'x', 'q']);
+    map.insert('x', vec!['z', 's', 'd', 'c']);
+    map.insert('c', vec!['x', 'd', 'f', 'v']);
+    map.insert('v', vec!['c', 'f', 'g', 'b']);
+    map.insert('b', vec!['v', 'g', 'h', 'n']);
+    map.insert('n', vec!['b', 'h', 'j']);
+    
+    map
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_repetition(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    for i in 0..domain.len() {
+        if let Some(char_at_i) = domain.chars().nth(i) {
+            let before = &domain[..i];
+            let after = &domain[i + 1..];
+            let repeated_char = char_at_i.to_string();
+            
+            // Double the character at position i
+            let modified = format!("{}{}{}{}", before, repeated_char, repeated_char, after);
+            if modified != domain {
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_addition(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Add single letters at the end
+    for i in 97..=122 { // a-z
+        let letter = char::from(i as u8);
+        variations.push(format!("{}{}.{}", domain, letter, tld));
+    }
+    
+    // Add numbers at the end
+    for i in 0..=9 {
+        variations.push(format!("{}{}.{}", domain, i, tld));
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_subdomain_injection(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Insert dots to create fake subdomains
+    for i in 1..domain.len() {
+        let before = &domain[..i];
+        let after = &domain[i..];
+        
+        // Don't insert dot after hyphen or before hyphen
+        if !before.ends_with('-') && !after.starts_with('-') {
+            let modified = format!("{}.{}", before, after);
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn load_dictionary(file_path: &str) -> Vec<String> {
+    use std::fs;
+    use std::io::{BufRead, BufReader};
+    
+    let mut words = Vec::new();
+    
+    match fs::File::open(file_path) {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                if let Ok(word) = line {
+                    let word = word.trim();
+                    if !word.is_empty() && !word.starts_with("//") {
+                        words.push(word.to_lowercase());
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Warning: Could not load dictionary file '{}': {}", file_path, e);
+        }
+    }
+    
+    words
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_combosquatting(domain: &str, tld: &str, dictionary: &[String]) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Common combosquatting keywords based on research
+    let keywords = vec![
+        "support", "secure", "security", "login", "signin", "pay", "payment",
+        "help", "service", "services", "shop", "store", "mail", "email",
+        "web", "app", "mobile", "api", "admin", "account", "user", "users",
+        "online", "portal", "official", "verification", "verify", "confirm",
+        "update", "renewal", "billing", "invoice", "refund", "customer",
+        "tech", "technical", "helpdesk", "contact", "info", "about"
+    ];
+    
+    // Use dictionary words if provided, otherwise use default keywords
+    let all_keywords = if !dictionary.is_empty() {
+        dictionary.to_vec()
+    } else {
+        keywords.iter().map(|&s| s.to_string()).collect()
+    };
+    
+    for keyword in all_keywords {
+        // Prefix combinations
+        variations.push(format!("{}-{}.{}", keyword, domain, tld));
+        variations.push(format!("{}{}.{}", keyword, domain, tld));
+        
+        // Suffix combinations  
+        variations.push(format!("{}-{}.{}", domain, keyword, tld));
+        variations.push(format!("{}{}.{}", domain, keyword, tld));
+    }
+    
+    // www variations
+    if !domain.starts_with("www") {
+        variations.push(format!("ww{}.{}", domain, tld));
+        variations.push(format!("www{}.{}", domain, tld));
+        variations.push(format!("www-{}.{}", domain, tld));
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_vowel_swapping(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    let vowels = "aeiou";
+    
+    for (i, current_char) in domain.chars().enumerate() {
+        if vowels.contains(current_char) {
+            for vowel in vowels.chars() {
+                if vowel != current_char {
+                    let mut chars: Vec<char> = domain.chars().collect();
+                    chars[i] = vowel;
+                    let modified: String = chars.into_iter().collect();
+                    variations.push(format!("{}.{}", modified, tld));
+                }
+            }
+        }
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_hyphenation(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Insert hyphens at every possible position
+    for i in 1..domain.len() {
+        let before = &domain[..i];
+        let after = &domain[i..];
+        variations.push(format!("{}-{}.{}", before, after, tld));
+    }
+    
+    variations
+}
+cat mixed_script_function.tmp
+fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}
+fn generate_omission(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    if domain.len() > 1 {
+        // Remove each character one at a time
+        for i in 0..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.remove(i);
+            let modified: String = chars.into_iter().collect();
+            if !modified.is_empty() {
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    variations
+cat mixed_script_function.tmp
+}fn generate_idn_homograph(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // IDN homograph attacks using Unicode characters that look identical to ASCII
+    let idn_mappings = [
+        // Cyrillic lookalikes (extremely dangerous)
+        ('a', 'а'), // U+0061 -> U+0430 (Cyrillic small letter a)
+        ('e', 'е'), // U+0065 -> U+0435 (Cyrillic small letter ie)  
+        ('o', 'о'), // U+006F -> U+043E (Cyrillic small letter o)
+        ('p', 'р'), // U+0070 -> U+0440 (Cyrillic small letter er)
+        ('c', 'с'), // U+0063 -> U+0441 (Cyrillic small letter es)
+        ('x', 'х'), // U+0078 -> U+0445 (Cyrillic small letter ha)
+        ('y', 'у'), // U+0079 -> U+0443 (Cyrillic small letter u)
+        ('k', 'к'), // U+006B -> U+043A (Cyrillic small letter ka)
+        
+        // Greek lookalikes  
+        ('a', 'α'), // U+0061 -> U+03B1 (Greek small letter alpha)
+        ('o', 'ο'), // U+006F -> U+03BF (Greek small letter omicron)  
+        ('p', 'ρ'), // U+0070 -> U+03C1 (Greek small letter rho)
+        ('v', 'ν'), // U+0076 -> U+03BD (Greek small letter nu)
+        ('x', 'χ'), // U+0078 -> U+03C7 (Greek small letter chi)
+        ('u', 'υ'), // U+0075 -> U+03C5 (Greek small letter upsilon)
+        
+        // Other dangerous lookalikes
+        ('i', 'і'), // U+0069 -> U+0456 (Cyrillic small letter byelorussian-ukrainian i)
+        ('j', 'ј'), // U+006A -> U+0458 (Cyrillic small letter je)
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &idn_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Add Right-to-Left Override attacks
+    let rtl_override = '\u{202E}';
+    variations.push(format!("{}{}.{}", rtl_override, domain, tld));
+    
+    // Add invisible character attacks
+    let invisible_chars = [
+        '\u{200B}', // Zero Width Space
+        '\u{200C}', // Zero Width Non-Joiner  
+        '\u{200D}', // Zero Width Joiner
+        '\u{2060}', // Word Joiner
+    ];
+    
+    for &invisible in &invisible_chars {
+        // Insert at various positions
+        for i in 1..domain.len() {
+            let mut chars: Vec<char> = domain.chars().collect();
+            chars.insert(i, invisible);
+            let modified: String = chars.into_iter().collect();
+            variations.push(format!("{}.{}", modified, tld));
+        }
+    }
+    
+    variations
+}fn generate_mixed_script(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Mixed script attacks combining different Unicode scripts
+    let script_combinations = [
+        // Cyrillic + Latin combinations
+        [
+            ('a', ['а', 'a']), // Mix Cyrillic and Latin 'a'
+            ('e', ['е', 'e']), // Mix Cyrillic and Latin 'e'  
+            ('o', ['о', 'o']), // Mix Cyrillic and Latin 'o'
+            ('p', ['р', 'p']), // Mix Cyrillic and Latin 'p'
+            ('c', ['с', 'c']), // Mix Cyrillic and Latin 'c'
+        ],
+        // Greek + Latin combinations  
+        [
+            ('a', ['α', 'a']), // Mix Greek and Latin 'a'
+            ('o', ['ο', 'o']), // Mix Greek and Latin 'o'
+            ('p', ['ρ', 'p']), // Mix Greek and Latin 'p'
+            ('v', ['ν', 'v']), // Mix Greek and Latin 'v'
+            ('x', ['χ', 'x']), // Mix Greek and Latin 'x'
+        ],
+    ];
+    
+    // Generate mixed script variations
+    for script_set in &script_combinations {
+        if domain.len() <= 6 { // Limit complexity
+            let chars: Vec<char> = domain.chars().collect();
+            
+            // Try different mixing patterns
+            for i in 0..chars.len() {
+                for &(target_char, alternatives) in script_set {
+                    if chars[i] == target_char {
+                        // Pattern 1: Mix first occurrence with script 0, second with script 1
+                        let mut mixed_chars = chars.clone();
+                        let mut alt_index = 0;
+                        
+                        for j in 0..mixed_chars.len() {
+                            if mixed_chars[j] == target_char {
+                                mixed_chars[j] = alternatives[alt_index % alternatives.len()];
+                                alt_index += 1;
+                            }
+                        }
+                        
+                        let mixed_domain: String = mixed_chars.into_iter().collect();
+                        if mixed_domain != domain {
+                            variations.push(format!("{}.{}", mixed_domain, tld));
+                        }
+                    }
+                }
+            }
+            
+            // Pattern 2: Alternating script pattern
+            let mut alternating_chars = chars.clone();
+            let mut use_alt_script = false;
+            
+            for (i, &ch) in chars.iter().enumerate() {
+                for script_set in &script_combinations {
+                    for &(target_char, alternatives) in script_set {
+                        if ch == target_char {
+                            let script_index = if use_alt_script { 0 } else { 1 };
+                            if script_index < alternatives.len() {
+                                alternating_chars[i] = alternatives[script_index];
+                                use_alt_script = !use_alt_script;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let alternating_domain: String = alternating_chars.into_iter().collect();
+            if alternating_domain != domain {
+                variations.push(format!("{}.{}", alternating_domain, tld));
+            }
+        }
+    }
+    
+    // Advanced mixed script with directional markers
+    let ltr_mark = '\u{200E}'; // Left-to-Right Mark
+    let rtl_mark = '\u{200F}'; // Right-to-Left Mark
+    
+    // Insert directional markers to create rendering confusion
+    for i in 1..domain.len() {
+        let mut chars: Vec<char> = domain.chars().collect();
+        chars.insert(i, ltr_mark);
+        let marked_domain: String = chars.into_iter().collect();
+        variations.push(format!("{}.{}", marked_domain, tld));
+        
+        let mut chars2: Vec<char> = domain.chars().collect();
+        chars2.insert(i, rtl_mark);
+        let marked_domain2: String = chars2.into_iter().collect();
+        variations.push(format!("{}.{}", marked_domain2, tld));
+    }
+    
+    variations
+}
+fn generate_extended_unicode(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Extended Unicode homoglyphs from various scripts (160k+ character space)
+    let extended_mappings = [
+        // Mathematical script variations
+        ('a', '𝒶'), // U+1D4B6 Mathematical script small a
+        ('b', '𝒷'), // U+1D4B7 Mathematical script small b  
+        ('c', '𝒸'), // U+1D4B8 Mathematical script small c
+        ('d', '𝒹'), // U+1D4B9 Mathematical script small d
+        ('e', '𝑒'), // U+1D452 Mathematical italic small e
+        ('f', '𝒻'), // U+1D4BB Mathematical script small f
+        ('g', '𝑔'), // U+1D454 Mathematical italic small g
+        ('h', '𝒽'), // U+1D4BD Mathematical script small h
+        ('i', '𝒾'), // U+1D4BE Mathematical script small i
+        ('j', '𝒿'), // U+1D4BF Mathematical script small j
+        ('k', '𝓀'), // U+1D4C0 Mathematical script small k
+        ('l', '𝓁'), // U+1D4C1 Mathematical script small l
+        ('m', '𝓂'), // U+1D4C2 Mathematical script small m
+        ('n', '𝓃'), // U+1D4C3 Mathematical script small n
+        ('o', '𝑜'), // U+1D45C Mathematical italic small o
+        ('p', '𝓅'), // U+1D4C5 Mathematical script small p
+        ('r', '𝓇'), // U+1D4C7 Mathematical script small r
+        ('s', '𝓈'), // U+1D4C8 Mathematical script small s
+        ('t', '𝓉'), // U+1D4C9 Mathematical script small t
+        ('u', '𝓊'), // U+1D4CA Mathematical script small u
+        ('v', '𝓋'), // U+1D4CB Mathematical script small v
+        ('w', '𝓌'), // U+1D4CC Mathematical script small w
+        ('x', '𝓍'), // U+1D4CD Mathematical script small x
+        ('y', '𝓎'), // U+1D4CE Mathematical script small y
+        ('z', '𝓏'), // U+1D4CF Mathematical script small z
+        
+        // Armenian script lookalikes
+        ('n', 'ո'), // U+0578 Armenian small letter vo
+        ('u', 'ս'), // U+057D Armenian small letter seh
+        ('o', 'օ'), // U+0585 Armenian small letter oh
+        
+        // Arabic script lookalikes (when contextually rendered)
+        ('o', 'ه'), // U+0647 Arabic letter heh
+        ('c', 'ج'), // U+062C Arabic letter jeem (contextual)
+        
+        // Georgian script lookalikes
+        ('o', 'ო'), // U+10DD Georgian letter on
+        ('e', 'ე'), // U+10D4 Georgian letter en
+        ('g', 'გ'), // U+10D2 Georgian letter gan
+        
+        // Cherokee script lookalikes
+        ('A', 'Ꭺ'), // U+13AA Cherokee letter go
+        ('B', 'Ᏸ'), // U+13F8 Cherokee letter ye
+        ('E', 'Ꭼ'), // U+13AC Cherokee letter gv  
+        ('P', 'Ꮲ'), // U+13B2 Cherokee letter tlv
+        ('R', 'Ʀ'), // U+0280 Latin letter small capital r
+        ('S', 'Ꮪ'), // U+13AA Cherokee letter su
+        ('T', 'Ꭲ'), // U+13A2 Cherokee letter i
+        ('Y', 'Ꭹ'), // U+13F9 Cherokee letter yi
+        
+        // Canadian Aboriginal syllabics
+        ('b', 'ᑳ'), // U+1473 Canadian syllabics ka
+        ('d', 'ᑯ'), // U+146F Canadian syllabics ko  
+        ('p', 'ᑭ'), // U+146D Canadian syllabics ki
+        
+        // Tifinagh script lookalikes
+        ('l', 'ⵍ'), // U+2D4D Tifinagh letter yel
+        ('n', 'ⵏ'), // U+2D4F Tifinagh letter yan
+        ('r', 'ⵔ'), // U+2D54 Tifinagh letter yar
+        ('t', 'ⵜ'), // U+2D5C Tifinagh letter yat
+        
+        // Ethiopic script lookalikes  
+        ('h', 'ሀ'), // U+1200 Ethiopic syllable ha
+        ('l', 'ለ'), // U+1208 Ethiopic syllable le
+        ('m', 'መ'), // U+1218 Ethiopic syllable me
+        ('n', 'ነ'), // U+1290 Ethiopic syllable ne
+        ('r', 'ረ'), // U+1228 Ethiopic syllable re
+        ('s', 'ሰ'), // U+1230 Ethiopic syllable se
+        ('t', 'ተ'), // U+1270 Ethiopic syllable te
+        
+        // Mongolian script lookalikes
+        ('o', 'ᠣ'), // U+1823 Mongolian letter o
+        ('u', 'ᠤ'), // U+1824 Mongolian letter u
+        
+        // Combining diacriticals that create visual confusion
+        ('a', 'à'), // a + grave accent
+        ('a', 'á'), // a + acute accent  
+        ('a', 'â'), // a + circumflex
+        ('a', 'ä'), // a + diaeresis
+        ('e', 'è'), // e + grave accent
+        ('e', 'é'), // e + acute accent
+        ('e', 'ê'), // e + circumflex  
+        ('i', 'ì'), // i + grave accent
+        ('i', 'í'), // i + acute accent
+        ('o', 'ò'), // o + grave accent
+        ('o', 'ó'), // o + acute accent
+        ('u', 'ù'), // u + grave accent
+        ('u', 'ú'), // u + acute accent
+    ];
+    
+    // Generate single character substitutions
+    for (i, ch) in domain.chars().enumerate() {
+        for &(ascii_char, unicode_char) in &extended_mappings {
+            if ch == ascii_char {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = unicode_char;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    // Generate combinations of multiple characters (limited to prevent explosion)
+    if domain.len() <= 5 {
+        let chars: Vec<char> = domain.chars().collect();
+        
+        // Two character substitutions
+        for i in 0..chars.len() {
+            for j in (i+1)..chars.len() {
+                for &(ascii1, unicode1) in &extended_mappings[0..20] { // Limit to first 20 mappings
+                    for &(ascii2, unicode2) in &extended_mappings[0..20] {
+                        if chars[i] == ascii1 && chars[j] == ascii2 {
+                            let mut new_chars = chars.clone();
+                            new_chars[i] = unicode1;
+                            new_chars[j] = unicode2;
+                            let modified: String = new_chars.into_iter().collect();
+                            variations.push(format!("{}.{}", modified, tld));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add Unicode normalization attacks (different forms of same character)
+    let normalization_variants = [
+        // Angstrom sign vs A with ring above
+        ('A', 'Å'), // U+0041 + U+030A vs U+00C5
+        // Ohm sign vs Greek capital omega  
+        ('Ω', 'Ω'), // U+2126 vs U+03A9
+    ];
+    
+    for (i, ch) in domain.chars().enumerate() {
+        for &(variant1, variant2) in &normalization_variants {
+            if ch == variant1 {
+                let mut new_domain = domain.chars().collect::<Vec<_>>();
+                new_domain[i] = variant2;
+                let modified: String = new_domain.into_iter().collect();
+                variations.push(format!("{}.{}", modified, tld));
+            }
+        }
+    }
+    
+    variations
+}
+fn generate_brand_confusion(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Brand confusion through strategic prefixes and suffixes
+    let confusion_prefixes = [
+        "www", "www-", "www.", "m", "m.", "mobile", "mobile-",  
+        "secure", "secure-", "official", "official-", "real", "real-",
+        "my", "my-", "get", "get-", "go", "go-", "new", "new-", 
+        "login", "login-", "account", "account-", "verify", "verify-",
+        "update", "update-", "support", "support-", "help", "help-",
+        "service", "service-", "customer", "customer-", "admin", "admin-",
+        "mail", "mail-", "email", "email-", "webmail", "webmail-",
+        "app", "app-", "apps", "apps-", "api", "api-", "dev", "dev-",
+        "test", "test-", "beta", "beta-", "demo", "demo-", "trial", "trial-",
+        "free", "free-", "premium", "premium-", "pro", "pro-", "plus", "plus-"
+    ];
+    
+    let confusion_suffixes = [
+        "-app", "-apps", "-online", "-web", "-site", "-portal", "-login",
+        "-secure", "-official", "-verify", "-account", "-mail", "-email", 
+        "-support", "-help", "-service", "-center", "-hub", "-net", "-pro",
+        "-plus", "-premium", "-free", "-trial", "-demo", "-beta", "-test",
+        "-dev", "-api", "-mobile", "-m", "-www", "-new", "-update", "-real",
+        "-auth", "-sso", "-id", "-identity", "-admin", "-panel", "-dashboard"
+    ];
+    
+    // Add confusion prefixes
+    for prefix in &confusion_prefixes {
+        variations.push(format!("{}{}.{}", prefix, domain, tld));
+        variations.push(format!("{}.{}.{}", prefix, domain, tld));
+    }
+    
+    // Add confusion suffixes  
+    for suffix in &confusion_suffixes {
+        variations.push(format!("{}{}.{}", domain, suffix, tld));
+        variations.push(format!("{}.{}.{}", domain, suffix, tld));
+    }
+    
+    // Compound confusion (prefix + suffix)
+    let high_impact_prefixes = ["secure", "official", "my", "login", "www"];
+    let high_impact_suffixes = ["-app", "-online", "-login", "-secure", "-official"];
+    
+    for prefix in &high_impact_prefixes {
+        for suffix in &high_impact_suffixes {
+            variations.push(format!("{}{}{}.{}", prefix, domain, suffix, tld));
+            variations.push(format!("{}-{}{}.{}", prefix, domain, suffix, tld));
+        }
+    }
+    
+    // Authority confusion using common organizational terms
+    let authority_terms = [
+        "corp", "inc", "ltd", "llc", "company", "group", "enterprise",
+        "solutions", "systems", "technologies", "tech", "digital", "global",
+        "international", "worldwide", "network", "partners", "associates"
+    ];
+    
+    for term in &authority_terms {
+        variations.push(format!("{}-{}.{}", domain, term, tld));
+        variations.push(format!("{}{}.{}", domain, term, tld));
+        variations.push(format!("{}.{}.{}", domain, term, tld));
+    }
+    
+    // Urgency and action confusion
+    let urgency_terms = [
+        "urgent", "important", "critical", "immediate", "action", "required",
+        "expired", "suspended", "locked", "blocked", "warning", "alert",
+        "notice", "update", "verify", "confirm", "activate", "enable"
+    ];
+    
+    for term in &urgency_terms {
+        variations.push(format!("{}-{}.{}", term, domain, tld));
+        variations.push(format!("{}{}.{}", term, domain, tld));
+    }
+    
+    // Geographic confusion
+    let geo_terms = [
+        "us", "usa", "uk", "eu", "global", "international", "local", 
+        "regional", "national", "americas", "europe", "asia", "africa"
+    ];
+    
+    for geo in &geo_terms {
+        variations.push(format!("{}-{}.{}", domain, geo, tld));
+        variations.push(format!("{}.{}.{}", domain, geo, tld));
+        variations.push(format!("{}-{}.{}", geo, domain, tld));
+    }
+    
+    // Version and edition confusion
+    let version_terms = [
+        "v2", "v3", "2024", "2025", "new", "next", "latest", "current",
+        "updated", "improved", "enhanced", "advanced", "pro", "premium",
+        "enterprise", "business", "personal", "home", "mobile", "web"
+    ];
+    
+    for version in &version_terms {
+        variations.push(format!("{}{}.{}", domain, version, tld));
+        variations.push(format!("{}-{}.{}", domain, version, tld));
+    }
+    
+    // Protocol confusion
+    let protocol_terms = ["http", "https", "ssl", "secure", "encrypted"];
+    
+    for protocol in &protocol_terms {
+        variations.push(format!("{}-{}.{}", protocol, domain, tld));
+        variations.push(format!("{}.{}.{}", protocol, domain, tld));
+    }
+    
+    variations
+}
+fn generate_intl_tld(domain: &str, tld: &str) -> Vec<String> {
+    let mut variations = Vec::new();
+    
+    // Internationalized Domain Name TLDs (IDN TLDs)
+    let idn_tlds = [
+        // Cyrillic script TLDs  
+        ("com", "ком"), // .com in Cyrillic
+        ("net", "нет"), // .net in Cyrillic  
+        ("org", "орг"), // .org in Cyrillic
+        
+        // Arabic script TLDs
+        ("com", "كوم"), // .com in Arabic
+        ("net", "شبكة"), // .net in Arabic
+        ("org", "منظمة"), // .org in Arabic
+        
+        // Chinese script TLDs
+        ("com", "公司"), // .com in Chinese (company)
+        ("net", "网络"), // .net in Chinese (network)  
+        ("org", "组织"), // .org in Chinese (organization)
+        ("cn", "中国"), // .cn in Chinese (China)
+        
+        // Japanese script TLDs
+        ("com", "コム"), // .com in Katakana
+        ("net", "ネット"), // .net in Katakana
+        ("org", "オルグ"), // .org in Katakana (transliteration)
+        
+        // Korean script TLDs
+        ("com", "컴"), // .com in Hangul  
+        ("net", "넷"), // .net in Hangul
+        ("kr", "한국"), // .kr in Hangul (Korea)
+        
+        // Greek script TLDs
+        ("com", "κομ"), // .com in Greek
+        ("net", "δικτυο"), // .net in Greek (network)
+        ("org", "οργ"), // .org in Greek
+        ("gr", "ελ"), // .gr/.el in Greek
+        
+        // Hebrew script TLDs
+        ("com", "קום"), // .com in Hebrew
+        ("net", "רשת"), // .net in Hebrew (network)
+        ("org", "ארג"), // .org in Hebrew (organization)
+        
+        // Thai script TLDs
+        ("com", "คอม"), // .com in Thai
+        ("net", "เน็ต"), // .net in Thai  
+        ("th", "ไทย"), // .th in Thai (Thailand)
+        
+        // Devanagari script TLDs (Hindi, etc.)
+        ("com", "कॉम"), // .com in Devanagari
+        ("net", "नेट"), // .net in Devanagari
+        ("org", "संगठन"), // .org in Devanagari (organization)
+        ("in", "भारत"), // .in in Devanagari (India)
+    ];
+    
+    // Generate IDN TLD variations
+    for &(latin_tld, idn_tld) in &idn_tlds {
+        if tld == latin_tld || tld == "com" || tld == "net" || tld == "org" {
+            variations.push(format!("{}.{}", domain, idn_tld));
+        }
+    }
+    
+    // Mixed script TLD attacks (combining scripts)
+    let mixed_tlds = [
+        "co.ук", // co.uk with Cyrillic 'uk'  
+        "com.ау", // com.au with Cyrillic 'au'
+        "со.uk", // co.uk with Cyrillic 'co'
+        "соm", // com with Cyrillic 'o'  
+        "сom", // com with Cyrillic 'c'
+        "nеt", // net with Cyrillic 'e'
+        "оrg", // org with Cyrillic 'o'
+        "οrg", // org with Greek 'o'
+        "cοm", // com with Greek 'o'
+    ];
+    
+    for mixed_tld in &mixed_tlds {
+        variations.push(format!("{}.{}", domain, mixed_tld));
+    }
+    
+    // Punycode representation attacks (xn-- prefix)
+    let punycode_tlds = [
+        "xn--80akhbyknj4f", // .com in Cyrillic  
+        "xn--e1afmkfd",     // .org in Cyrillic
+        "xn--80ao21a",      // .com in Chinese
+        "xn--55qx5d",       // .com in Chinese (alternate)
+        "xn--io0a7i",       // .com in Chinese (network)
+        "xn--1ck2e1b",      // .com in Japanese
+        "xn--tckwe",        // .com in Japanese (alternate)  
+        "xn--p1acf",        // .org in Cyrillic (alternate)
+        "xn--mgberp4a5d4ar", // .com in Arabic
+        "xn--ngbc5azd",     // .org in Arabic
+    ];
+    
+    for punycode_tld in &punycode_tlds {
+        variations.push(format!("{}.{}", domain, punycode_tld));
+    }
+    
+    // Country-specific IDN TLD variations
+    let country_idn_tlds = [
+        // Real IDN ccTLDs that exist
+        "қаз", // Kazakhstan (.kz)
+        "укр", // Ukraine (.ua)  
+        "срб", // Serbia (.rs)
+        "мкд", // Macedonia (.mk)
+        "бел", // Belarus (.by)
+        "рф",  // Russia (.ru)
+        "中国", // China (.cn)  
+        "香港", // Hong Kong (.hk)
+        "台湾", // Taiwan (.tw)
+        "新加坡", // Singapore (.sg)
+        "한국", // Korea (.kr)
+        "ไทย", // Thailand (.th)
+        "ລາວ", // Laos (.la)
+        "భారత్", // India (.in) in Telugu
+        "ভাৰত", // India (.in) in Bengali  
+        "ভারত", // India (.in) in Bengali (alternate)
+        "भारत", // India (.in) in Devanagari
+        "ಭಾರತ", // India (.in) in Kannada
+        "السعودية", // Saudi Arabia (.sa)
+        "امارات", // UAE (.ae)
+        "مصر", // Egypt (.eg)
+        "الجزائر", // Algeria (.dz)
+        "فلسطين", // Palestine (.ps)
+        "ελ", // Greece (.gr)
+        "бг", // Bulgaria (.bg)
+    ];
+    
+    for country_tld in &country_idn_tlds {
+        variations.push(format!("{}.{}", domain, country_tld));
+    }
+    
+    // Advanced IDN TLD with subdomain confusion
+    let subdomain_idn_combinations = [
+        ("www", "ком"),
+        ("mail", "нет"),  
+        ("secure", "орг"),
+        ("login", "中国"),
+        ("app", "コム"),
+    ];
+    
+    for &(subdomain, idn_tld) in &subdomain_idn_combinations {
+        variations.push(format!("{}.{}.{}", subdomain, domain, idn_tld));
+    }
+    
+    variations
+}
