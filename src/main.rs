@@ -362,15 +362,78 @@ async fn main() {
         variations.extend(filter_valid_domains(generate_cyrillic_comprehensive(&domain_name, &tld)));
     }
     
-    // Output results
-    let mut sorted_variations: Vec<_> = variations.into_iter().collect();
-    sorted_variations.sort();
+    // Apply exact max_variations limit - generate more if needed to replace invalid ones
+    let mut all_variations: Vec<_> = variations.into_iter().collect();
+    all_variations.sort();
     
     let output_count = if let Some(max) = cli.max_variations {
-        max.min(sorted_variations.len())
+        if all_variations.len() < max && !cli.combo {
+            // We need more variations to reach the exact count requested
+            // Use combo-style generation to create additional unique variations
+            let target_additional = max - all_variations.len();
+            let mut additional_variations = HashSet::new();
+            let mut attempts = 0;
+            let max_attempts = target_additional * 20;
+            
+            // Generate combinations of existing algorithms to create new variations
+            use rand::seq::SliceRandom;
+            use rand::thread_rng;
+            use rand::Rng;
+            let mut rng = thread_rng();
+            
+            // Define available generators
+            let generators: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
+                ("char_sub", Box::new(|d, t| generate_char_substitutions(d, t))),
+                ("homoglyphs", Box::new(|d, t| generate_homoglyphs(d, t))),
+                ("misspellings", Box::new(|d, t| generate_misspellings(d, t))),
+                ("tld_variations", Box::new(|d, t| generate_tld_variations(d, t))),
+                ("keyboard", Box::new(|d, t| generate_keyboard_variations(d, t))),
+                ("repetition", Box::new(|d, t| generate_repetition(d, t))),
+                ("addition", Box::new(|d, t| generate_addition(d, t))),
+                ("omission", Box::new(|d, t| generate_omission(d, t))),
+                ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t))),
+            ];
+            
+            while additional_variations.len() < target_additional && attempts < max_attempts {
+                attempts += 1;
+                
+                // Generate a new variation by applying 2-3 random algorithms in sequence
+                let mut current_domain = domain_name.clone();
+                let mut current_tld = tld.clone();
+                let num_transforms = rng.gen_range(2..=3);
+                
+                for _ in 0..num_transforms {
+                    if let Some((_, generator)) = generators.choose(&mut rng) {
+                        let results = filter_valid_domains(generator(&current_domain, &current_tld));
+                        if let Some(result) = results.choose(&mut rng) {
+                            let (new_domain, new_tld) = parse_domain(result);
+                            current_domain = new_domain;
+                            current_tld = new_tld;
+                        }
+                    }
+                }
+                
+                let final_domain = format!("{}.{}", current_domain, current_tld);
+                if final_domain != format!("{}.{}", domain_name, tld) 
+                    && is_valid_domain(&final_domain) 
+                    && !all_variations.contains(&final_domain) 
+                    && !additional_variations.contains(&final_domain) {
+                    additional_variations.insert(final_domain);
+                }
+            }
+            
+            // Add the additional variations
+            all_variations.extend(additional_variations);
+            all_variations.sort();
+        }
+        
+        // Return exactly the requested number
+        max.min(all_variations.len())
     } else {
-        sorted_variations.len()
+        all_variations.len()
     };
+    
+    let sorted_variations = all_variations;
     
     if cli.check_status {
         for variation in sorted_variations.iter().take(output_count) {
@@ -383,7 +446,7 @@ async fn main() {
         }
     }
     
-    eprintln!("Generated {} variations", sorted_variations.len());
+    eprintln!("Generated {} variations", output_count);
 }
 
 async fn check_domain_status(domain: &str) -> String {
