@@ -41,17 +41,42 @@ For convenience, DomFuzz provides pre-configured bundles that group related tran
 ### 👀 Lookalike Bundle
 **Character-level transformations that create visually similar domains**
 
-The `lookalike` bundle includes all transformations that focus on character-level substitutions and visual confusion attacks:
+The `lookalike` bundle is the default transformation set, specifically designed to generate domains that can fool users through visual deception. This bundle combines the four most effective transformation types that attackers commonly use in phishing campaigns and typosquatting attacks.
 
-**Basic Character Substitutions:**
-- `1337speak` - Leetspeak character substitutions with realistic combinations (o→0, l→1, e→3, a→@, s→$)
-- `misspelling` - Character insertion, deletion, transposition, keyboard typos, vowel swaps (with combinations)  
-- `fat-finger` - Character doubling, adjacent-keys substitution, and adjacent-keys insertion (combinations)
+**The lookalike bundle includes:**
 
-**Unicode/Script Variations:**
-- `mixed-encodings` - Visually similar characters (a→α), Unicode/Punycode, multiple writing systems, extended character set substitutions, extensive Cyrillic lookalikes
+#### 🔢 1337speak (Leetspeak)
+Replaces letters with visually similar numbers and symbols using internet culture conventions:
+- **Core mappings**: o→0 (most common), l→1, e→3, a→4, s→5, g→9, b→6, t→7, z→2
+- **Intelligence applied**: Maximum 40% substitution, respects domain length, prioritizes high-impact changes
+- **Real examples**: google.com → g00gle.com, g0ogle.com, goog1e.com, 9oogle.com
 
-**Advanced Character Manipulation:**
+#### ⌨️ Misspelling
+Comprehensive typing error simulation modeling natural user mistakes:
+- **Error types**: Character deletion, insertion, transposition, substitution, vowel swapping
+- **Keyboard awareness**: QWERTY-based adjacent key errors, frequency-weighted placement
+- **Real examples**: google.com → googlle.com (insertion), gogle.com (deletion), googel.com (transposition)
+
+#### 👆 Fat-finger
+Models accidental keypresses from imprecise typing or mobile input:
+- **Mechanisms**: Character doubling, adjacent key insertion, multiple finger errors
+- **QWERTY modeling**: Horizontal, vertical, and diagonal key adjacency
+- **Real examples**: google.com → gooogle.com (doubling), googke.com (adjacent l→k)
+
+#### 🌐 Mixed-encodings (Homograph Attacks)
+Advanced Unicode homoglyph attacks using visually identical characters from different scripts. Enhanced with comprehensive character mappings based on IronGeek's homoglyph generator research:
+
+- **Extensive character coverage**: 60+ Unicode characters per letter with mappings from Cyrillic, Greek, Latin Extended, Armenian, Cherokee, and other scripts
+- **Attack vectors**: Single, double, and triple character substitutions with intelligent positioning
+- **Script mixing**: Cyrillic (а, е, о, р), Greek (α, β, γ, δ), Fullwidth (ａ, ｂ, ｃ), Accented Latin (À, É, ü)
+- **Dangerous examples**: 
+  - google.com → gооgle.com (Cyrillic 'о' characters)
+  - amazon.com → аmazon.com (Cyrillic 'а')
+  - paypal.com → раypal.com (Cyrillic 'р')
+  - microsoft.com → microsοft.com (Greek 'ο')
+- **Technical sophistication**: Punycode encoding creates valid IDN domains that appear identical in browsers
+- **Enhanced detection resistance**: Multiple substitution combinations with realistic character distribution
+- **Real-world impact**: Domains appear completely identical but resolve to attacker-controlled IPs
 
 
 
@@ -96,64 +121,91 @@ This bundle is particularly effective for:
 - 🔍 **Attack simulation** - Models sophisticated bitsquatting campaigns
 - 📡 **Network security** - Simulates transmission corruption scenarios
 
-### 🔤 Basic Typos
-Common typing mistakes and simple character errors:
-- **Leetspeak Substitution**: `o→0`, `l→1`, `e→3`, etc.
-- **Misspellings**: Character insertion, deletion, transposition, omission, addition, double-char-replacement
-- **Fat Finger**: Double characters (`google→gooogle`), adjacent-keys substitution, and adjacent-keys insertion (with combinations)  
-- **Keyboard Proximity**: Adjacent key typos based on QWERTY layout
+### 🔤 Advanced Character Manipulation
+Beyond the lookalike bundle, additional character-level techniques:
+
+#### 💾 Bitsquatting
+Simulates single bit-flip errors from hardware failures, memory corruption, or cosmic ray strikes:
+- **Mechanism**: Flips individual bits in ASCII characters (8-bit representation)
+- **Examples**: 'o' (0x6F) → 'g' (0x67), 'e' (0x65) → 'a' (0x61)
+- **Attack scenarios**: Memory corruption, hardware failures, electromagnetic interference
+- **Real examples**: google.com → gmogle.com, foogle.com (various bit-flips)
 
 ```bash
-cargo run -- --1337speak --misspelling google.com
+cargo run -- -t bitsquatting example.com
 ```
 
-### 🔧 Character Manipulation
-Advanced character-level transformation techniques:
-- **Bitsquatting**: Single bit-flip transformations
 
 
-```bash
-cargo run -- --fat-finger example.com
-```
 
-### 🌐 Unicode/Script Attacks
-International character confusion transformations:
-- **Mixed Encodings**: Visually similar characters (`a→α`), Unicode/Punycode transformations, Cyrillic + Latin character mixing, 160k+ character homoglyph support, extensive Cyrillic substitutions
-
-```bash
-cargo run -- --mixed-encodings paypal.com
-```
 
 ### 🗣️ Phonetic/Semantic
-Sound and meaning-based transformations:
-- **Homophones**: Sound-alike word replacements (`right→write`)
-- **Vowel Swapping**: Vowel interchange (`a↔e`, `i↔o`)
-- **Cognitive**: Semantic word confusion transformations
-- **Singular/Plural**: Word form variations (`bank→banks`)
+Sound and meaning-based transformations that exploit language patterns:
+
+#### 🔊 Homophones
+Replaces words with sound-alike alternatives having different spellings:
+- **Categories**: Direct homophones (to/two), phonetic spelling (phone→fone), silent letters (know→no)
+- **Examples**: paypal.com → paypall.com, security.com → sekurity.com
+- **Effectiveness**: Targets non-native speakers, voice-to-text systems
+
+#### 🧠 Cognitive
+Exploits semantic associations and business terminology confusion:
+- **Substitution types**: Synonyms (secure→safe), industry terms (login→signin), concept overlap (mail→email)
+- **Psychology**: Leverages mental associations, "close enough" feeling
+- **Examples**: paypal.com → payfriend.com, microsoft.com → microsoftware.com
+
+#### 📝 Singular/Plural
+Converts between grammatical forms exploiting naming convention uncertainty:
+- **Patterns**: Regular plurals (file→files), irregular (child→children), compound words
+- **Business impact**: Many legitimate sites exist in both forms
+- **Examples**: amazon.com → amazone-products.com, microsoft.com → microsoftservices.com
 
 ```bash
-cargo run -- --homophones --cognitive facebook.com
+cargo run -- -t homophones,cognitive,singular-plural facebook.com
 ```
 
 ### 🔢 Number/Word Substitution
-Numeric and word form manipulation:
-- **Cardinal Substitution**: Number-to-word conversion (`one→1`)
-- **Ordinal Substitution**: Ordinal conversion (`first→1st`)
+Exploits variations in numeric representation:
+
+#### 🔢 Cardinal Substitution
+Converts between digits and written numbers:
+- **Bidirectional**: 1↔one, 2↔two, 4↔four (including homophone 'for')
+- **Special contexts**: Versioning (v1→vone), ranking (top5→topfive), quantities (buy2→buytwo)
+- **Examples**: 1password.com → onepassword.com, 4chan.org → fourchan.org
+
+#### 🥇 Ordinal Substitution
+Converts between numeric and written ordinal forms:
+- **Patterns**: 1st↔first, 2nd↔second, 3rd↔third
+- **Business use**: Priority services (1stchoice→firstchoice), sequences (2ndround→secondround)
+- **Examples**: 21stcentury.com → twentyfirstcentury.com, 3rdpartysoftware.com → thirdpartysoftware.com
 
 ```bash
-cargo run -- --cardinal-substitution --ordinal-substitution first1.com
+cargo run -- -t cardinal-substitution,ordinal-substitution first1.com
 ```
 
 ### 🏗️ Structure Manipulation
-Domain structure and format changes:
-- **Word Swapping**: Domain part rearrangement
-- **Hyphenation**: Hyphen insertion (`facebook→face-book`)
-- **Subdomain Injection**: Internal dot insertion
-- **Dot Insertion/Omission**: Dot manipulation
-- **Dot/Hyphen Substitution**: Dot-hyphen interchange
+Domain structure and format modifications:
+
+#### 🔄 Word Swapping
+Reorders components in compound domain names while maintaining brand elements:
+- **Patterns**: Two-word reversal (mybank→bankmy), multi-word rotation, action-object swaps
+- **Psychology**: Users focus on familiar words, not exact order
+- **Examples**: paypalcredit.com → creditpaypal.com, microsoftoffice.com → officemicrosoft.com
+
+#### ➖ Hyphenation
+Manipulates hyphen usage through insertion, removal, and substitution:
+- **Techniques**: Hyphen insertion (google→goo-gle), removal (my-bank→mybank), character substitution (_→-)
+- **Effectiveness**: Many legitimate sites exist with/without hyphens
+- **Examples**: paypal.com → pay-pal.com, facebook.com → face-book.com
+
+#### 📍 Subdomain Injection
+Strategic subdomain manipulation and dot placement:
+- **Dot insertion**: g.oogle.com, goo.gle.com
+- **Dot omission**: mail.google.com → mailgoogle.com
+- **Dot-hyphen substitution**: sub.domain.com → sub-domain.com
 
 ```bash
-cargo run -- --hyphenation --dot-insertion google.com
+cargo run -- -t word-swap,hyphenation,dot-insertion google.com
 ```
 
 ### ⚠️ System Fault
@@ -164,17 +216,33 @@ Hardware and system error transformations:
 cargo run -- -t system-fault example.com
 ```
 
-### 🌍 Domain Extensions
-TLD and branding manipulation:
-- **TLD Variations**: Alternative top-level domains
-- **International TLD**: IDN TLD variations (`.com→.көм`)
-- **Wrong SLD**: Incorrect second-level domains (`.co.uk→.co.gov.uk`)
-- **Combosquatting**: Keyword combination transformations
-- **Brand Confusion**: Authority prefixes/suffixes (`secure-`, `-official`)
-- **Domain Prefix/Suffix**: Common domain extensions
+### 🌍 Domain Extensions & Branding
+TLD manipulation and brand-based deception:
+
+#### 🌐 TLD Variations
+Alternative top-level domain substitutions:
+- **Common swaps**: .com→.net/.org/.co/.io, country codes (.co.uk, .de, .fr)
+- **Examples**: google.com → google.net, google.org, google.co
+
+#### 🏢 Combosquatting
+Combines target domains with common dictionary words for enhanced legitimacy:
+- **Word categories**: Security (secure-, safe-), services (-support, -help), authority (official-, real-)
+- **Psychology**: Creates perception of enhanced security or official relationship
+- **Examples**: google.com → securegoogle.com, paypal.com → paypallogin.com
+
+#### 🎯 Brand Confusion
+Adds brand-related terms to exploit trust in established names:
+- **Techniques**: Authority prefixes (official-, verified-), service extensions (-support, -center)
+- **Examples**: microsoft.com → officialmicrosoft.com, amazon.com → amazon-support.com
+
+#### 🔤 Domain Prefix/Suffix
+Common prefix and suffix additions:
+- **Prefixes**: my-, the-, secure-, get-
+- **Suffixes**: -app, -online, -secure, -official
+- **Examples**: google.com → mygoogle.com, google-secure.com
 
 ```bash
-cargo run -- --tld-variations --brand-confusion --combosquatting amazon.com
+cargo run -- -t tld-variations,combosquatting,brand-confusion amazon.com
 ```
 
 ## Usage Examples
@@ -307,6 +375,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [dnstwist](https://github.com/elceef/dnstwist) - Python domain fuzzing tool
 - [URLInsane](https://github.com/rangertaha/urlinsane) - Go domain fuzzing tool
 - [DomainFuzz](https://github.com/monkeym4ster/DomainFuzz) - Python domain fuzzing tool
+- [IronGeek Homoglyph Attack Generator](https://www.irongeek.com/homoglyph-attack-generator.php) - Comprehensive homoglyph research and generator
 - [Unicode Homoglyph Research](https://www.unicode.org/reports/tr39/)
 
 ## Changelog

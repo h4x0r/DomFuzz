@@ -49,40 +49,57 @@ lazy_static::lazy_static! {
 #[command(
     about = "A Rust CLI tool for generating domain name variations using typosquatting techniques"
 )]
-#[command(after_help = "Available transformations grouped by category:
+#[command(after_help = "TRANSFORMATION CATEGORIES:
 
-Character-level:
-  1337speak, misspelling, fat-finger, mixed-encodings, bitsquatting
+👀 LOOKALIKE BUNDLE (Default) - Visual deception attacks:
+  1337speak      - Leetspeak substitutions (o→0, l→1, e→3, a→4, s→5, g→9)
+  misspelling    - Typing errors (insertion, deletion, transposition, substitution)
+  fat-finger     - Accidental keypresses (doubling, adjacent keys)
+  mixed-encodings - Enhanced Unicode homoglyph attacks (60+ chars/letter, Cyrillic/Greek/Latin/Cherokee)
 
-Phonetic/Semantic:
-  homophones, cognitive, singular-plural
+💾 SYSTEM FAULT - Hardware/transmission errors:
+  bitsquatting   - Single bit-flip transformations (memory corruption, cosmic rays)
 
-Number/Word:
-  cardinal-substitution, ordinal-substitution
+🗣️ PHONETIC/SEMANTIC - Language-based variations:
+  homophones     - Sound-alike replacements (right→write, to→two)
+  cognitive      - Semantic confusion (secure→safe, login→signin)
+  singular-plural - Grammatical forms (bank→banks, service→services)
 
-Structure:
-  word-swap, hyphenation, subdomain, dot-insertion, dot-omission, dot-hyphen-sub
+🔢 NUMBER/WORD - Numeric representation:
+  cardinal-substitution - Digits↔words (1↔one, 2↔two, 4↔four)
+  ordinal-substitution  - Ordinals (1st↔first, 2nd↔second)
 
-Extensions:
-  tld-variations, intl-tld, wrong-sld, combosquatting, brand-confusion, domain-prefix, domain-suffix
+🏗️ STRUCTURE - Domain format manipulation:
+  word-swap      - Component reordering (paypal-credit → credit-paypal)
+  hyphenation    - Hyphen manipulation (facebook → face-book)
+  dot-insertion  - Internal dots (google → g.oogle)
+  dot-omission   - Remove dots (mail.google → mailgoogle)
+  dot-hyphen-sub - Dot↔hyphen swap (sub.domain → sub-domain)
 
-Bundles:
-  lookalike - Character-level transformations creating visually similar domains
-             (1337speak, misspelling, fat-finger, mixed-encodings)
-  system-fault - Hardware/system error transformations
-             (bitsquatting)
+🌍 EXTENSIONS/BRANDING - TLD and brand exploitation:
+  tld-variations - Alternative TLDs (.com→.net/.org/.co)
+  intl-tld      - International domains (.com→.co.uk/.de)
+  wrong-sld     - Wrong 2nd-level domains (.co.uk→.com.uk)
+  combosquatting - Dictionary combinations (secure-paypal, google-login)
+  brand-confusion - Authority terms (official-, real-, -support)
+  domain-prefix  - Common prefixes (my-, the-, secure-)
+  domain-suffix  - Common suffixes (-app, -online, -official)
 
-Examples:
-  domfuzz example.com                    (uses lookalike bundle by default)
-  domfuzz -t system-fault example.com       (uses system-fault bundle)
-  domfuzz -t 1337speak,fat-finger example.com
-  domfuzz -t all example.com
-  domfuzz -t misspellings -1 example.com")]
+USAGE EXAMPLES:
+  domfuzz example.com                     # Uses lookalike bundle (default)
+  domfuzz -t system-fault example.com    # Hardware error simulation
+  domfuzz -t 1337speak,fat-finger example.com  # Specific transformations
+  domfuzz -t all example.com             # All available transformations
+  domfuzz -t lookalike --similarity example.com  # With similarity scoring
+  domfuzz -r -n 100 example.com          # Check 100 registered domains")]
 struct Cli {
     /// Domain to generate variations for
     domain: String,
 
-    /// Transformations to enable (comma-separated). Default: 'lookalike' bundle. Use 'all' for all transformations
+    /// Transformations to enable (comma-separated). 
+    /// Default: 'lookalike' bundle (1337speak, misspelling, fat-finger, mixed-encodings).
+    /// Use 'all' for all transformations, or specify individual ones.
+    /// Available bundles: 'lookalike', 'system-fault'
     #[arg(long, short = 't', value_delimiter = ',')]
     transformation: Vec<String>,
 
@@ -1869,12 +1886,8 @@ fn generate_1337speak(domain: &str, tld: &str) -> Vec<String> {
         ('1', 'i'),
         ('e', '3'),
         ('3', 'e'),
-        ('a', '@'),
-        ('@', 'a'),
         ('a', '4'),
         ('4', 'a'),
-        ('s', '$'),
-        ('$', 's'),
         ('s', '5'),
         ('5', 's'),
         ('g', '9'),
@@ -2183,35 +2196,51 @@ fn generate_mixed_encodings(domain: &str, tld: &str) -> Vec<String> {
     let domain_lower = domain.to_lowercase();
     let chars: Vec<char> = domain_lower.chars().collect();
 
-    // Comprehensive encoding map (homoglyphs, IDN, mixed-script, extended unicode, cyrillic)
+    // Comprehensive encoding map based on IronGeek homoglyph research and Unicode homoglyphs
     let encoding_map: std::collections::HashMap<char, Vec<char>> = [
-        ('a', vec!['а', 'α', 'ａ']), // Cyrillic а, Greek α, Fullwidth a
-        ('e', vec!['е', 'ε', 'ｅ']), // Cyrillic е, Greek ε, Fullwidth e
-        ('o', vec!['о', 'ο', 'ｏ']), // Cyrillic о, Greek ο, Fullwidth o
-        ('p', vec!['р', 'ρ', 'ｐ']), // Cyrillic р, Greek ρ, Fullwidth p
-        ('c', vec!['с', 'ｃ']),      // Cyrillic с, Fullwidth c
-        ('y', vec!['у', 'ｙ']),      // Cyrillic у, Fullwidth y
-        ('x', vec!['х', 'χ', 'ｘ']), // Cyrillic х, Greek χ, Fullwidth x
-        ('v', vec!['ν', 'ｖ']),      // Greek ν, Fullwidth v
-        ('u', vec!['υ', 'ｕ']),      // Greek υ, Fullwidth u
-        ('i', vec!['і', 'ι', 'ｉ']), // Cyrillic і, Greek ι, Fullwidth i
-        ('j', vec!['ј', 'ｊ']),      // Cyrillic ј, Fullwidth j
-        ('s', vec!['ѕ', 'ｓ']),      // Cyrillic ѕ, Fullwidth s
-        ('b', vec!['ь', 'β', 'ｂ']), // Cyrillic ь, Greek β, Fullwidth b
-        ('h', vec!['н', 'η', 'ｈ']), // Cyrillic н, Greek η, Fullwidth h
-        ('k', vec!['к', 'κ', 'ｋ']), // Cyrillic к, Greek κ, Fullwidth k
-        ('m', vec!['м', 'μ', 'ｍ']), // Cyrillic м, Greek μ, Fullwidth m
-        ('n', vec!['п', 'η', 'ｎ']), // Cyrillic п, Greek η, Fullwidth n
-        ('t', vec!['т', 'τ', 'ｔ']), // Cyrillic т, Greek τ, Fullwidth t
-        ('r', vec!['г', 'ρ', 'ｒ']), // Cyrillic г, Greek ρ, Fullwidth r
-        ('d', vec!['д', 'ｄ']),      // Cyrillic д, Fullwidth d
-        ('f', vec!['ф', 'ｆ']),      // Cyrillic ф, Fullwidth f
-        ('g', vec!['ѓ', 'ｇ']),      // Cyrillic ѓ, Fullwidth g
-        ('l', vec!['ӏ', 'ｌ']),      // Cyrillic ӏ, Fullwidth l
-        ('w', vec!['ѡ', 'ｗ']),      // Cyrillic ѡ, Fullwidth w
-        ('q', vec!['ԛ', 'ｑ']),      // Cyrillic ԛ, Fullwidth q
-        ('z', vec!['ᴢ', 'ｚ']),      // Small capital Z, Fullwidth z
-    ]
+        // Letters with extensive homoglyph mappings
+        ('a', vec!['а', 'α', 'ａ', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'à', 'á', 'â', 'ã', 'ä', 'å', 'ɑ', 'Α', 'Ꭺ']), 
+        ('b', vec!['ь', 'β', 'ｂ', 'ß', 'ʙ', 'Β', 'В', 'Ь', 'Ᏼ', 'ᛒ']),
+        ('c', vec!['с', 'ｃ', 'ϲ', 'Ϲ', 'С', 'Ꮯ', 'Ⅽ', 'ⅽ']),
+        ('d', vec!['д', 'ｄ', 'Ď', 'ď', 'Đ', 'đ', 'ԁ', 'ժ', 'Ꭰ', 'ḍ', 'Ⅾ', 'ⅾ']),
+        ('e', vec!['е', 'ε', 'ｅ', 'È', 'É', 'Ê', 'Ë', 'é', 'ê', 'ë', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'Ě', 'ě', 'Ε', 'Е', 'Ꭼ']),
+        ('f', vec!['ф', 'ｆ', 'Ϝ']),
+        ('g', vec!['ѓ', 'ｇ', 'ɡ', 'ɢ', 'Ԍ', 'ն', 'Ꮐ']),
+        ('h', vec!['н', 'η', 'ｈ', 'ʜ', 'Η', 'Н', 'һ', 'Ꮋ']),
+        ('i', vec!['і', 'ι', 'ｉ', 'ɩ', 'Ι', 'І', 'ا', 'Ꭵ', 'ᛁ', 'Ⅰ', 'ⅰ']),
+        ('j', vec!['ј', 'ｊ', 'ϳ', 'Ј', 'յ', 'Ꭻ']),
+        ('k', vec!['к', 'κ', 'ｋ', 'Κ', 'К', 'Ꮶ', 'ᛕ']),
+        ('l', vec!['ӏ', 'ｌ', 'ʟ', 'ا', 'Ꮮ', 'Ⅼ', 'ⅼ']),
+        ('m', vec!['м', 'μ', 'ｍ', 'Μ', 'Ϻ', 'М', 'Ꮇ', 'ᛖ', 'Ⅿ', 'ⅿ']),
+        ('n', vec!['п', 'η', 'ｎ', 'ɴ', 'Ν']),
+        ('o', vec!['о', 'ο', 'ｏ', 'Ο', 'О', 'Օ']), // Zero and O are handled separately
+        ('p', vec!['р', 'ρ', 'ｐ', 'Ρ', 'Р', 'Ꮲ']),
+        ('q', vec!['ԛ', 'ｑ', 'Ⴍ', 'Ⴓ']),
+        ('r', vec!['г', 'ρ', 'ｒ', 'ʀ', 'Ի', 'Ꮢ', 'ᚱ']),
+        ('s', vec!['ѕ', 'ｓ', 'Ѕ', 'Տ', 'Ⴝ', 'Ꮪ']),
+        ('t', vec!['т', 'τ', 'ｔ', 'Τ', 'Т', 'Ꭲ']),
+        ('u', vec!['υ', 'ｕ', 'μ', 'Ա', 'Ս', '⋃']),
+        ('v', vec!['ν', 'ｖ', 'Ѵ', 'ѵ', 'Ꮩ', 'Ⅴ', 'ⅴ']),
+        ('w', vec!['ѡ', 'ｗ', 'Ꮃ']),
+        ('x', vec!['х', 'χ', 'ｘ', 'Χ', 'Х', 'Ⅹ', 'ⅹ']),
+        ('y', vec!['у', 'ｙ', 'ʏ', 'Υ', 'γ', 'Ү']),
+        ('z', vec!['ᴢ', 'ｚ', 'Ζ', 'Ꮓ']),
+        
+        // Numbers with homoglyphs
+        ('0', vec!['О', 'о', 'Ο', 'ο', 'Օ', 'ｏ', '٠']), // Zero with O variations
+        ('1', vec!['ا', 'Ⅰ', 'ⅰ', 'ǀ', '１']), // One with I, l variations  
+        ('2', vec!['２']),
+        ('3', vec!['３']),
+        ('4', vec!['４']),
+        ('5', vec!['５']),
+        ('6', vec!['６']),
+        ('7', vec!['７']),
+        ('8', vec!['８', 'Ց']),
+        ('9', vec!['９']),
+        
+        // Only hyphens and dots are valid special characters in domain names
+        ('-', vec!['‐', '－']),
+        ('.', vec!['٠', '۔', '܁', '܂', '…', '‧', '。', '．', '｡']),    ]
     .iter()
     .cloned()
     .collect();

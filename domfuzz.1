@@ -62,11 +62,11 @@ Leetspeak (also known as "leet" or "1337") is a form of internet slang that repl
 .br
 • \fBe → 3\fR: The number '3' resembles a backwards 'E'
 .br
-• \fBa → @\fR: The at-symbol contains the letter 'a' shape
+• \fBa → 4\fR: The number '4' contains the letter 'a' shape
 .br
-• \fBs → $\fR: The dollar sign resembles an 'S' with lines through it
+• \fBs → 5\fR: The number '5' resembles an 'S'
 .br
-• \fBi → !\fR: Exclamation point resembles lowercase 'i' without the dot
+• \fBi → 1\fR: The number '1' resembles lowercase 'i'
 .br
 • \fBt → 7\fR: The number '7' can resemble a 't' in certain fonts
 .br
@@ -88,11 +88,11 @@ Leetspeak (also known as "leet" or "1337") is a form of internet slang that repl
 .br
 google.com → g00gle.com, g0ogle.com, goog1e.com, 9oogle.com
 .br
-amazon.com → amaz0n.com, @mazon.com, @m@z0n.com
+amazon.com → amaz0n.com, amazon.com → am4z0n.com, amazon.com → 4mazon.com
 .br
-paypal.com → paypa1.com, p@ypal.com, p@yp@l.com
+paypal.com → paypa1.com, paypal.com → p4ypal.com, paypal.com → payp4l.com  
 .br
-microsoft.com → m!crosoft.com, micr0soft.com, micr0$0ft.com
+microsoft.com → micr0soft.com, microsoft.com → micr050ft.com, microsoft.com → m1cr0soft.com
 
 .TP
 .B misspelling
@@ -191,20 +191,33 @@ microsoft.com → microosoft.com (o doubling), microsofft.com (f doubling)
 
 .TP
 .B mixed-encodings
-Advanced Unicode-based homograph attack that exploits visually identical characters from different writing systems to create deceptive domains. This is one of the most sophisticated and dangerous transformation types, as the resulting domains are virtually indistinguishable from legitimate ones in most fonts and browsers. The technique leverages the vast Unicode character set to find lookalike characters from various scripts.
+Advanced Unicode homograph attacks using visually identical characters from different scripts. Enhanced with comprehensive character mappings based on IronGeek's homoglyph generator research, providing extensive coverage of Unicode lookalike characters for sophisticated domain deception attacks.
 .br
 .br
-\fBHomograph attack vectors:\fR
+\fBEnhanced character coverage:\fR
 .br
-• \fBCyrillic substitutions\fR: Latin letters replaced with identical Cyrillic letters
+• \fB60+ Unicode characters per letter\fR: Extensive mappings from multiple scripts
 .br
-• \fBGreek substitutions\fR: Latin letters replaced with identical Greek letters
+• \fBCyrillic script\fR: а, е, о, р, с, х (look identical to Latin a, e, o, p, c, x)
 .br
-• \fBMultiple script mixing\fR: Combining different writing systems in one domain
+• \fBGreek script\fR: α, β, γ, δ, ε, ζ, η, θ, ι, κ, λ, μ, ν, ο, π, ρ, σ, τ, υ, φ, χ, ψ, ω
 .br
-• \fBExtended Unicode\fR: Less common but visually identical characters
+• \fBFullwidth forms\fR: ａ, ｂ, ｃ, ｄ, ｅ (visually similar but different Unicode points)
 .br
-• \fBPunycode encoding\fR: ASCII-compatible encoding revealing the attack
+• \fBLatin Extended\fR: À, Á, Â, Ã, Ä, Å, à, á, â, ã, ä, å (accented variations)
+.br
+• \fBArmenian/Cherokee\fR: Specialized character substitutions
+.br
+.br
+\fBIntelligent substitution patterns:\fR
+.br
+• \fBSingle substitutions\fR: One character replacement (google → gооgle)
+.br
+• \fBDouble substitutions\fR: Two character replacements (amazon → аmаzon) 
+.br
+• \fBTriple substitutions\fR: Complex multi-character attacks (for longer domains)
+.br
+• \fBRealistic distribution\fR: Up to 60% character substitution with intelligent positioning
 .br
 .br
 \fBCommon character substitutions:\fR
@@ -307,30 +320,30 @@ Advanced phonetic transformation that replaces words with sound-alike alternativ
 .br
 BPhonetic substitution categories:R
 .br
-• BHomophone pairsR: Direct sound-alike replacements (to/two, see/sea, right/write)
+• \fBHomophone pairs\fR: Direct sound-alike replacements (to/two, see/sea, right/write)
 .br
-• BPhonetic spellingR: Alternative spellings based on pronunciation (phone → fone, enough → enuf)
+• \fBPhonetic spelling\fR: Alternative spellings based on pronunciation (phone → fone, enough → enuf)
 .br
-• BSilent lettersR: Omission of silent letters (know → no, write → rite)
+• \fBSilent letters\fR: Omission of silent letters (know → no, write → rite)
 .br
-• BVowel soundsR: Similar vowel sound substitutions (a → e in certain contexts)
+• \fBVowel sounds\fR: Similar vowel sound substitutions (a → e in certain contexts)
 .br
-• BConsonant clustersR: Simplified consonant groups (night → nite, light → lite)
+• \fBConsonant clusters\fR: Simplified consonant groups (night → nite, light → lite)
 .br
 .br
 BCommon homophone examples:R
 .br
-• Bto/two/tooR: Numbers and prepositions → 2checkout.com, toocheckout.com
+• \fBto/two/too\fR: Numbers and prepositions → 2checkout.com, toocheckout.com
 .br
-• Bsee/sea/cR: Viewing and ocean → seesecurity.com, csecurity.com
+• \fBsee/sea/c\fR: Viewing and ocean → seesecurity.com, csecurity.com
 .br
-• Bright/write/riteR: Direction and authoring → writebank.com, ritebank.com
+• \fBright/write/rite\fR: Direction and authoring → writebank.com, ritebank.com
 .br
-• Bwon/one/1R: Victory and numbers → wonbank.com, 1bank.com
+• \fBwon/one/1\fR: Victory and numbers → wonbank.com, 1bank.com
 .br
-• Bno/knowR: Negation and knowledge → nomorepay.com, knowmorpay.com
+• \fBno/know\fR: Negation and knowledge → nomorepay.com, knowmorpay.com
 .br
-• Bfor/four/4R: Preposition and number → 4google.com, fourgle.com
+• \fBfor/four/4\fR: Preposition and number → 4google.com, fourgle.com
 .br
 .br
 BAttack effectiveness:R
@@ -363,32 +376,32 @@ Advanced semantic transformation that exploits cognitive biases and word associa
 .br
 BSemantic substitution categories:R
 .br
-• BSynonym replacementR: Words with similar meaning (secure → safe, buy → purchase)
+• \fBSynonym replacement\fR: Words with similar meaning (secure → safe, buy → purchase)
 .br
-• BIndustry terminologyR: Related business terms (login → signin, account → profile)
+• \fBIndustry terminology\fR: Related business terms (login → signin, account → profile)
 .br
-• BAction verbsR: Similar actions (download → install, search → find)
+• \fBAction verbs\fR: Similar actions (download → install, search → find)
 .br
-• BConcept confusionR: Related concepts (mail → email, web → net)
+• \fBConcept confusion\fR: Related concepts (mail → email, web → net)
 .br
-• BBrand terminologyR: Alternative brand language (shop → store, pay → checkout)
+• \fBBrand terminology\fR: Alternative brand language (shop → store, pay → checkout)
 .br
 .br
 BCommon cognitive substitutions:R
 .br
-• Bsecure ↔ safeR: Security concept overlap → securebank.com → safebank.com
+• \fBsecure ↔ safe\fR: Security concept overlap → securebank.com → safebank.com
 .br
-• Blogin ↔ signinR: Authentication terminology → userlogin.com → usersignin.com
+• \fBlogin ↔ signin\fR: Authentication terminology → userlogin.com → usersignin.com
 .br
-• Bshop ↔ storeR: Commerce terminology → onlineshop.com → onlinestore.com
+• \fBshop ↔ store\fR: Commerce terminology → onlineshop.com → onlinestore.com
 .br
-• Bmail ↔ emailR: Communication concepts → webmail.com → webemail.com
+• \fBmail ↔ email\fR: Communication concepts → webmail.com → webemail.com
 .br
-• Baccount ↔ profileR: User identity → myaccount.com → myprofile.com
+• \fBaccount ↔ profile\fR: User identity → myaccount.com → myprofile.com
 .br
-• Bsearch ↔ findR: Discovery actions → quicksearch.com → quickfind.com
+• \fBsearch ↔ find\fR: Discovery actions → quicksearch.com → quickfind.com
 .br
-• Bdownload ↔ installR: Software actions → appdownload.com → appinstall.com
+• \fBdownload ↔ install\fR: Software actions → appdownload.com → appinstall.com
 .br
 .br
 BPsychological exploitation:R
@@ -434,28 +447,28 @@ Grammatical transformation that converts between singular and plural forms of no
 .br
 • BRegular pluralsR: Adding or removing -s suffix (file → files, book → books)
 .br
-• BIrregular pluralsR: Complex plural forms (child → children, person → people)
+• \fBIrregular plurals\fR: Complex plural forms (child → children, person → people)
 .br
-• BUnchanged pluralsR: Same form for both (sheep, fish, software)
+• \fBUnchanged plurals\fR: Same form for both (sheep, fish, software)
 .br
-• BLatin pluralsR: Academic/technical terms (datum → data, forum → forums/fora)
+• \fBLatin plurals\fR: Academic/technical terms (datum → data, forum → forums/fora)
 .br
-• BCompound wordsR: Multi-word combinations (webpage → webpages, software → softwares)
+• \fBCompound words\fR: Multi-word combinations (webpage → webpages, software → softwares)
 .br
 .br
 BCommon transformation examples:R
 .br
-• Bfile ↔ filesR: Document management → myfile.com ↔ myfiles.com
+• \fBfile ↔ files\fR: Document management → myfile.com ↔ myfiles.com
 .br
-• Bservice ↔ servicesR: Business offerings → webservice.com ↔ webservices.com
+• \fBservice ↔ services\fR: Business offerings → webservice.com ↔ webservices.com
 .br
-• Bproduct ↔ productsR: E-commerce → bestproduct.com ↔ bestproducts.com
+• \fBproduct ↔ products\fR: E-commerce → bestproduct.com ↔ bestproducts.com
 .br
-• Bsolution ↔ solutionsR: Business terminology → itsolution.com ↔ itsolutions.com
+• \fBsolution ↔ solutions\fR: Business terminology → itsolution.com ↔ itsolutions.com
 .br
-• Btool ↔ toolsR: Software/utilities → webtool.com ↔ webtools.com
+• \fBtool ↔ tools\fR: Software/utilities → webtool.com ↔ webtools.com
 .br
-• BnewsR: Always plural → technews.com (no singular form exists)
+• \fBnews\fR: Always plural → technews.com (no singular form exists)
 .br
 .br
 BAttack psychology:R
@@ -504,45 +517,45 @@ Numerical transformation that converts between cardinal numbers and their writte
 .br
 BCardinal number conversion patterns:R
 .br
-• BDigits to wordsR: 1 → one, 2 → two, 3 → three, etc.
+• \fBDigits to words\fR: 1 → one, 2 → two, 3 → three, etc.
 .br
-• BWords to digitsR: one → 1, two → 2, three → 3, etc.
+• \fBWords to digits\fR: one → 1, two → 2, three → 3, etc.
 .br
-• BMixed representationsR: Partial conversions within compound terms
+• \fBMixed representations\fR: Partial conversions within compound terms
 .br
-• BZero variationsR: 0 → zero, oh, null, nil
+• \fBZero variations\fR: 0 → zero, oh, null, nil
 .br
-• BTeen numbersR: 11 → eleven, 12 → twelve, 13 → thirteen, etc.
+• \fBTeen numbers\fR: 11 → eleven, 12 → twelve, 13 → thirteen, etc.
 .br
-• BLarge numbersR: 100 → hundred, 1000 → thousand
+• \fBLarge numbers\fR: 100 → hundred, 1000 → thousand
 .br
 .br
 BCommon transformation examples:R
 .br
-• B1 ↔ oneR: First or unity → 1stbank.com ↔ firstbank.com
+• \fB1 ↔ one\fR: First or unity → 1stbank.com ↔ firstbank.com
 .br
-• B2 ↔ twoR: Second or pair → 2checkout.com ↔ twocheckout.com  
+• \fB2 ↔ two\fR: Second or pair → 2checkout.com ↔ twocheckout.com  
 .br
-• B4 ↔ fourR: Quantity or 'for' homophone → 4you.com ↔ fouryou.com
+• \fB4 ↔ four\fR: Quantity or 'for' homophone → 4you.com ↔ fouryou.com
 .br
-• B8 ↔ eightR: Infinity symbol resemblance → figure8.com ↔ figureeight.com
+• \fB8 ↔ eight\fR: Infinity symbol resemblance → figure8.com ↔ figureeight.com
 .br
-• B10 ↔ tenR: Decimal base → top10.com ↔ topten.com
+• \fB10 ↔ ten\fR: Decimal base → top10.com ↔ topten.com
 .br
-• B0 ↔ zeroR: Null representation → point0.com ↔ pointzero.com
+• \fB0 ↔ zero\fR: Null representation → point0.com ↔ pointzero.com
 .br
 .br
 BSpecial number contexts:R
 .br
-• BVersioningR: v1.com → vone.com, version2.com → versiontwo.com
+• \fBVersioning\fR: v1.com → vone.com, version2.com → versiontwo.com
 .br
 • BRankingR: number1.com → numberone.com, top5.com → topfive.com
 .br
-• BQuantityR: buy2.com → buytwo.com, get3.com → getthree.com
+• \fBQuantity\fR: buy2.com → buytwo.com, get3.com → getthree.com
 .br
-• BDates/YearsR: 2024.com → twentytwentyfour.com
+• \fBDates/Years\fR: 2024.com → twentytwentyfour.com
 .br
-• BTechnologyR: web2.com → webtwo.com, ai4.com → aifour.com
+• \fBTechnology\fR: web2.com → webtwo.com, ai4.com → aifour.com
 .br
 .br
 BAttack effectiveness:R
@@ -575,56 +588,56 @@ Specialized numerical transformation that converts between ordinal numbers and t
 .br
 BOrdinal conversion patterns:R
 .br
-• BNumeric ordinalsR: 1st → first, 2nd → second, 3rd → third
+• \fBNumeric ordinals\fR: 1st → first, 2nd → second, 3rd → third
 .br
-• BSuffix variationsR: -st, -nd, -rd, -th endings
+• \fBSuffix variations\fR: -st, -nd, -rd, -th endings
 .br
-• BWritten ordinalsR: first → 1st, second → 2nd, third → 3rd
+• \fBWritten ordinals\fR: first → 1st, second → 2nd, third → 3rd
 .br
-• BHybrid formsR: Mixed digit-word combinations
+• \fBHybrid forms\fR: Mixed digit-word combinations
 .br
 • BRanking terminologyR: Position-based language variations
 .br
 .br
 BCommon ordinal transformations:R
 .br
-• B1st ↔ firstR: Primary position → 1stchoice.com ↔ firstchoice.com
+• \fB1st ↔ first\fR: Primary position → 1stchoice.com ↔ firstchoice.com
 .br
-• B2nd ↔ secondR: Secondary position → 2ndchance.com ↔ secondchance.com
+• \fB2nd ↔ second\fR: Secondary position → 2ndchance.com ↔ secondchance.com
 .br
-• B3rd ↔ thirdR: Tertiary position → 3rdparty.com ↔ thirdparty.com
+• \fB3rd ↔ third\fR: Tertiary position → 3rdparty.com ↔ thirdparty.com
 .br
-• B4th ↔ fourthR: Quaternary position → 4thstreet.com ↔ fourthstreet.com
+• \fB4th ↔ fourth\fR: Quaternary position → 4thstreet.com ↔ fourthstreet.com
 .br
-• B5th ↔ fifthR: Quinary position → 5thavenue.com ↔ fifthavenue.com
+• \fB5th ↔ fifth\fR: Quinary position → 5thavenue.com ↔ fifthavenue.com
 .br
-• Blast ↔ finalR: Terminal position → lastcall.com ↔ finalcall.com
+• \fBlast ↔ final\fR: Terminal position → lastcall.com ↔ finalcall.com
 .br
 .br
 BBusiness context applications:R
 .br
-• BPriority servicesR: 1stpriority.com → firstpriority.com
+• \fBPriority services\fR: 1stpriority.com → firstpriority.com
 .br
-• BSequential offeringsR: 2ndround.com → secondround.com  
+• \fBSequential offerings\fR: 2ndround.com → secondround.com  
 .br
 • BRanking systemsR: 3rdplace.com → thirdplace.com
 .br
-• BVersioningR: 2ndversion.com → secondversion.com
+• \fBVersioning\fR: 2ndversion.com → secondversion.com
 .br
-• BTime sequencesR: 1stquarter.com → firstquarter.com
+• \fBTime sequences\fR: 1stquarter.com → firstquarter.com
 .br
 .br
 BSpecialized ordinal contexts:R
 .br
-• BStreet addressesR: 5thstreet.com → fifthstreet.com
+• \fBStreet addresses\fR: 5thstreet.com → fifthstreet.com
 .br
-• BEvent namingR: 10thannual.com → tenthannual.com
+• \fBEvent naming\fR: 10thannual.com → tenthannual.com
 .br
-• BGeneration termsR: 3rdgen.com → thirdgen.com
+• \fBGeneration terms\fR: 3rdgen.com → thirdgen.com
 .br
-• BLevel/tier systemsR: 1stlevel.com → firstlevel.com
+• \fBLevel/tier systems\fR: 1stlevel.com → firstlevel.com
 .br
-• BSequential brandsR: 2ndnature.com → secondnature.com
+• \fBSequential brands\fR: 2ndnature.com → secondnature.com
 .br
 .br
 BAttack psychology:R
@@ -660,50 +673,50 @@ Structural transformation that reorders word components within compound domain n
 .br
 BWord reordering patterns:R
 .br
-• BTwo-word reversalR: word1-word2 → word2-word1
+• \fBTwo-word reversal\fR: word1-word2 → word2-word1
 .br
-• BMulti-word rotationR: Cyclical reordering of three or more words
+• \fBMulti-word rotation\fR: Cyclical reordering of three or more words
 .br
-• BPriority inversionR: Moving secondary words to primary position
+• \fBPriority inversion\fR: Moving secondary words to primary position
 .br
-• BAction-object swapsR: Verb-noun reordering (download-music → music-download)
+• \fBAction-object swaps\fR: Verb-noun reordering (download-music → music-download)
 .br
-• BAdjective-noun swapsR: Descriptor-subject reordering (secure-banking → banking-secure)
+• \fBAdjective-noun swaps\fR: Descriptor-subject reordering (secure-banking → banking-secure)
 .br
 .br
 BCommon word swap examples:R
 .br
-• Bmybank ↔ bankmyR: Possessive-institution → mybank.com ↔ bankmy.com
+• \fBmybank ↔ bankmy\fR: Possessive-institution → mybank.com ↔ bankmy.com
 .br
-• Bsecure-login ↔ login-secureR: Security-action → securelogin.com ↔ loginsecure.com
+• \fBsecure-login ↔ login-secure\fR: Security-action → securelogin.com ↔ loginsecure.com
 .br
-• Bweb-design ↔ design-webR: Platform-service → webdesign.com ↔ designweb.com
+• \fBweb-design ↔ design-web\fR: Platform-service → webdesign.com ↔ designweb.com
 .br
-• Bquick-pay ↔ pay-quickR: Speed-action → quickpay.com ↔ payquick.com
+• \fBquick-pay ↔ pay-quick\fR: Speed-action → quickpay.com ↔ payquick.com
 .br
-• Bsmart-home ↔ home-smartR: Technology-location → smarthome.com ↔ homesmart.com
+• \fBsmart-home ↔ home-smart\fR: Technology-location → smarthome.com ↔ homesmart.com
 .br
 .br
 BBusiness context applications:R
 .br
-• BFinancial servicesR: onlinebanking.com → bankingonline.com
+• \fBFinancial services\fR: onlinebanking.com → bankingonline.com
 .br
-• BE-commerceR: fastdelivery.com → deliveryfast.com
+• \fBE-commerce\fR: fastdelivery.com → deliveryfast.com
 .br
-• BTechnologyR: cloudstorage.com → storagecloud.com
+• \fBTechnology\fR: cloudstorage.com → storagecloud.com
 .br
-• BHealthcareR: medicalcare.com → caremedical.com
+• \fBHealthcare\fR: medicalcare.com → caremedical.com
 .br
-• BEducationR: onlinelearning.com → learningonline.com
+• \fBEducation\fR: onlinelearning.com → learningonline.com
 .br
 .br
 BMulti-word complex swaps:R
 .br
-• BThree-word rotationR: secure-online-banking → banking-secure-online → online-banking-secure
+• \fBThree-word rotation\fR: secure-online-banking → banking-secure-online → online-banking-secure
 .br
-• BPartial reorderingR: my-secure-account → secure-my-account → account-secure-my
+• \fBPartial reordering\fR: my-secure-account → secure-my-account → account-secure-my
 .br
-• BAction-adjective-nounR: buy-cheap-books → cheap-buy-books → books-cheap-buy
+• \fBAction-adjective-noun\fR: buy-cheap-books → cheap-buy-books → books-cheap-buy
 .br
 .br
 BPsychological exploitation:R
@@ -736,52 +749,52 @@ Structural transformation that manipulates hyphen usage in domain names through 
 .br
 BHyphenation manipulation patterns:R
 .br
-• BHyphen insertionR: Adding hyphens within words (google → goo-gle)
+• \fBHyphen insertion\fR: Adding hyphens within words (google → goo-gle)
 .br
-• BHyphen removalR: Removing existing hyphens (my-bank → mybank)
+• \fBHyphen removal\fR: Removing existing hyphens (my-bank → mybank)
 .br
-• BCharacter substitutionR: Replacing other punctuation with hyphens (_ → -, . → -)
+• \fBCharacter substitution\fR: Replacing other punctuation with hyphens (_ → -, . → -)
 .br
-• BWord boundary insertionR: Adding hyphens at logical word breaks
+• \fBWord boundary insertion\fR: Adding hyphens at logical word breaks
 .br
-• BSyllable separationR: Hyphenating at syllable boundaries
+• \fBSyllable separation\fR: Hyphenating at syllable boundaries
 .br
 .br
 BCommon hyphenation transformations:R
 .br
-• Bgoogle → goo-gleR: Internal word hyphenation
+• \fBgoogle → goo-gle\fR: Internal word hyphenation
 .br
-• Bmy-bank → mybankR: Compound word consolidation
+• \fBmy-bank → mybank\fR: Compound word consolidation
 .br
-• Bsecure_login → secure-loginR: Underscore to hyphen substitution
+• \fBsecure_login → secure-login\fR: Underscore to hyphen substitution
 .br
-• Bfacebook → face-bookR: Compound word separation
+• \fBfacebook → face-book\fR: Compound word separation
 .br
-• Bpaypal → pay-palR: Brand name segmentation
+• \fBpaypal → pay-pal\fR: Brand name segmentation
 .br
-• Be.mail → e-mailR: Dot to hyphen substitution
+• \fBe.mail → e-mail\fR: Dot to hyphen substitution
 .br
 .br
 BBusiness naming variations:R
 .br
-• BCompound brandsR: microsoft → micro-soft, amazon → ama-zon
+• \fBCompound brands\fR: microsoft → micro-soft, amazon → ama-zon
 .br
-• BDescriptive termsR: onlinestore → online-store, webdesign → web-design
+• \fBDescriptive terms\fR: onlinestore → online-store, webdesign → web-design
 .br
-• BService combinationsR: quickpay → quick-pay, fastmail → fast-mail
+• \fBService combinations\fR: quickpay → quick-pay, fastmail → fast-mail
 .br
-• BTechnology termsR: software → soft-ware, database → data-base
+• \fBTechnology terms\fR: software → soft-ware, database → data-base
 .br
 .br
 BCharacter substitution patterns:R
 .br
-• BUnderscore replacementR: secure_banking.com → secure-banking.com
+• \fBUnderscore replacement\fR: secure_banking.com → secure-banking.com
 .br
-• BDot replacementR: web.mail.com → web-mail.com
+• \fBDot replacement\fR: web.mail.com → web-mail.com
 .br
-• BSpace simulationR: my bank → my-bank (conceptual space representation)
+• \fBSpace simulation\fR: my bank → my-bank (conceptual space representation)
 .br
-• BCamelCase conversionR: myBank → my-bank (breaking camelCase)
+• \fBCamelCase conversion\fR: myBank → my-bank (breaking camelCase)
 .br
 .br
 BAttack psychology:R
@@ -870,52 +883,52 @@ Strategic transformation that combines target domain names with common dictionar
 .br
 BCombosquatting word categories:R
 .br
-• BSecurity termsR: secure-, safe-, protected-, verified-, trusted-
+• \fBSecurity terms\fR: secure-, safe-, protected-, verified-, trusted-
 .br
-• BService descriptorsR: -service, -support, -help, -center, -portal
+• \fBService descriptors\fR: -service, -support, -help, -center, -portal
 .br
-• BPersonalizationR: my-, your-, personal-, private-
+• \fBPersonalization\fR: my-, your-, personal-, private-
 .br
-• BAuthority markersR: official-, real-, authentic-, legitimate-
+• \fBAuthority markers\fR: official-, real-, authentic-, legitimate-
 .br
-• BAction wordsR: login-, download-, access-, connect-, join-
+• \fBAction words\fR: login-, download-, access-, connect-, join-
 .br
-• BTechnology termsR: -app, -online, -web, -digital, -cloud
+• \fBTechnology terms\fR: -app, -online, -web, -digital, -cloud
 .br
 .br
 BCommon combosquatting patterns:R
 .br
-• Bgoogle → securegoogle, googlesecure, mygoogleR: Security and personalization
+• \fBgoogle → securegoogle, googlesecure, mygoogle\fR: Security and personalization
 .br
-• Bpaypal → paypallogin, officialpaypal, safePayPalR: Authentication and authority
+• \fBpaypal → paypallogin, officialpaypal, safePayPal\fR: Authentication and authority
 .br
-• Bamazon → amazonstore, shopamazon, amazonappR: Service extension
+• \fBamazon → amazonstore, shopamazon, amazonapp\fR: Service extension
 .br
-• Bmicrosoft → microsoftofficial, realmicrosoft, microsoftsupportR: Authority and service
+• \fBmicrosoft → microsoftofficial, realmicrosoft, microsoftsupport\fR: Authority and service
 .br
-• Bfacebook → facebooklogin, myfacebook, facebookconnectR: Access and personalization
+• \fBfacebook → facebooklogin, myfacebook, facebookconnect\fR: Access and personalization
 .br
 .br
 BPrefix combinations (brand enhancement):R
 .br
-• BSecurity prefixesR: secure-paypal.com, safe-amazon.com, protected-google.com
+• \fBSecurity prefixes\fR: secure-paypal.com, safe-amazon.com, protected-google.com
 .br
-• BPersonal prefixesR: my-facebook.com, your-microsoft.com, personal-linkedin.com
+• \fBPersonal prefixes\fR: my-facebook.com, your-microsoft.com, personal-linkedin.com
 .br
-• BAuthority prefixesR: official-spotify.com, real-netflix.com, verified-twitter.com
+• \fBAuthority prefixes\fR: official-spotify.com, real-netflix.com, verified-twitter.com
 .br
-• BService prefixesR: support-apple.com, help-adobe.com, service-oracle.com
+• \fBService prefixes\fR: support-apple.com, help-adobe.com, service-oracle.com
 .br
 .br
 BSuffix combinations (service extension):R
 .br
-• BAction suffixesR: google-login.com, paypal-access.com, amazon-checkout.com
+• \fBAction suffixes\fR: google-login.com, paypal-access.com, amazon-checkout.com
 .br
-• BService suffixesR: microsoft-support.com, apple-service.com, adobe-help.com
+• \fBService suffixes\fR: microsoft-support.com, apple-service.com, adobe-help.com
 .br
-• BTech suffixesR: facebook-app.com, twitter-online.com, linkedin-portal.com
+• \fBTech suffixes\fR: facebook-app.com, twitter-online.com, linkedin-portal.com
 .br
-• BLocation suffixesR: paypal-usa.com, amazon-europe.com, google-asia.com
+• \fBLocation suffixes\fR: paypal-usa.com, amazon-europe.com, google-asia.com
 .br
 .br
 BPsychological manipulation tactics:R
@@ -933,13 +946,13 @@ Strategic transformation that combines target domain names with common dictionar
 .br
 BIndustry-specific combinations:R
 .br
-• BFinancialR: bankofamerica-secure.com, chase-login.com, wellsfargo-online.com
+• \fBFinancial\fR: bankofamerica-secure.com, chase-login.com, wellsfargo-online.com
 .br
-• BTechnologyR: microsoft-support.com, apple-store.com, oracle-cloud.com
+• \fBTechnology\fR: microsoft-support.com, apple-store.com, oracle-cloud.com
 .br
-• BSocial mediaR: facebook-messenger.com, twitter-api.com, instagram-business.com
+• \fBSocial media\fR: facebook-messenger.com, twitter-api.com, instagram-business.com
 .br
-• BE-commerceR: amazon-prime.com, ebay-secure.com, shopify-store.com
+• \fBE-commerce\fR: amazon-prime.com, ebay-secure.com, shopify-store.com
 .br
 .br
 BReal-world attack examples:R
@@ -1005,6 +1018,120 @@ The lookalike bundle includes:
 For detailed explanations and examples of each transformation, see the individual transformation sections below.
 
 
+
+.SS COMBINATORIAL TRANSFORMATION MECHANICS
+.B domfuzz
+employs sophisticated algorithms to systematically generate domain variations through comprehensive position-based and combinatorial approaches. Understanding these mechanics is crucial for defensive security professionals implementing comprehensive domain monitoring strategies.
+
+.TP
+.B Position-Based Generation
+Each transformation algorithm operates by identifying Ball possible positionsR within a domain where modifications can occur, then systematically applying changes at each valid location:
+
+BExample: 1337speak on "google.com"R
+.br
+• Position analysis: g[0], o[1], o[2], g[3], l[4], e[5] 
+.br
+• Valid substitution positions: o[1]→0, o[2]→0, g[3]→9, l[4]→1, e[5]→3
+.br
+• Single-position results: g0ogle.com, go0gle.com, goo9le.com, goog1e.com, googl3.com
+.br
+• Multi-position combinations: g00gle.com, g0o9le.com, g009l3.com, etc.
+
+.TP
+.B Combinatorial Complexity
+Transformations generate variations through multiple combinatorial approaches:
+
+\fBSingle Transformations (Default Mode)\fR:
+.br
+• Each transformation applied independently to original domain
+.br
+• Systematic enumeration of all valid position combinations
+.br
+• Realistic constraints prevent combinatorial explosion
+.br
+• Example: "paypal" with 1337speak → 32 variations across all position combinations
+
+\fBMulti-Position Combinations\fR:
+.br
+• Algorithms intelligently combine multiple modifications within single transformation
+.br
+• Length-aware constraints (short domains: 1-2 changes, long domains: up to 40% modification)
+.br
+• Distance-based spacing prevents adjacent modifications in short domains
+.br
+• Priority weighting favors high-impact substitutions (o→0, l→1 prioritized over rare substitutions)
+
+\fBCombo Mode Chains\fR:
+.br
+• Sequential application of 2-5 different transformation types
+.br
+• Each transformation operates on result of previous transformation
+.br
+• Weighted selection prevents conflicting transformations
+.br
+• Example chain: google.com → 1337speak → gooogle.com → fat-finger → goo0gle.com → misspelling → goo0gle.net
+
+.TP
+.B Algorithmic Intelligence
+Modern typosquatting attacks require sophisticated generation algorithms that balance comprehensiveness with realism:
+
+\fBConstraint Systems\fR:
+.br
+• \fBLength constraints\fR: Shorter domains receive fewer modifications to maintain plausibility
+.br
+• \fBFrequency weighting\fR: Common errors (o→0, l→1) generated more often than rare ones
+.br
+• \fBPosition analysis\fR: Errors weighted by natural typing patterns (more errors in middle of words)
+.br
+• BReadability preservationR: Maximum modification percentages prevent unrecognizable results
+
+BRealistic Error ModelingR:
+.br
+• BQWERTY adjacencyR: Keyboard-aware error generation based on physical key proximity
+.br
+• \fBPhonetic patterns\fR: Sound-based substitutions follow linguistic probability distributions
+.br
+• \fBTyping psychology\fR: Error placement reflects actual human typing behavior studies
+.br
+• \fBDevice-specific patterns\fR: Mobile vs desktop typing error signatures
+
+.TP
+.B Permutation Mathematics  
+The mathematical foundation ensures comprehensive coverage while maintaining computational efficiency:
+
+\fBPosition Permutations\fR:
+.br
+For domain of length n with k transformable positions:
+.br
+• Single position: k variations
+.br
+• Two positions: C(k,2) = k!/(2!(k-2)!) combinations  
+.br
+• Multiple positions: Σ C(k,i) for i=1 to max_errors
+
+\fBExample: "amazon" (6 characters) with 1337speak\fR:
+.br
+• Transformable positions: a[0]→4, a[2]→4, o[3]→0, n[5]→n (4 positions)
+.br
+• Single position: 4 variations  
+.br
+• Two positions: C(4,2) = 6 combinations
+.br
+• Three positions: C(4,3) = 4 combinations
+.br
+• Total theoretical: 14 combinations (filtered by realistic constraints)
+
+\fBConstraint Filtering\fR:
+.br
+• Theoretical combinations filtered through multiple constraint layers
+.br
+• Similarity thresholds eliminate excessive modifications
+.br
+• Readability filters ensure recognizable results
+.br
+• Domain validation removes invalid DNS names
+.br
+• Deduplication eliminates identical results from different algorithms
 
 .SH MODES OF OPERATION
 
