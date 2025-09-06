@@ -1,5 +1,9 @@
 use clap::Parser;
 use futures::stream::{self, StreamExt};
+use hickory_resolver::{
+    config::{ResolverConfig, ResolverOpts},
+    TokioAsyncResolver,
+};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::sync::Arc;
 use std::{
@@ -12,10 +16,6 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     time::timeout,
-};
-use hickory_resolver::{
-    config::{ResolverConfig, ResolverOpts},
-    TokioAsyncResolver,
 };
 
 // Constants for timeout values
@@ -323,8 +323,7 @@ async fn main() {
             min_similarity: parsed_min_similarity,
             batch_size: cli.batch_size,
         };
-        generate_combo_attacks_streaming(&config, &dict_words)
-        .await;
+        generate_combo_attacks_streaming(&config, &dict_words).await;
         // Combo mode now handles its own output and status checking
         return;
     }
@@ -831,13 +830,19 @@ async fn main() {
             let mut rng = thread_rng();
 
             // Define available generators
-        
+
             #[allow(clippy::type_complexity, clippy::redundant_closure)]
             let generators: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
                 ("char_sub", Box::new(|d, t| generate_1337speak(d, t))),
-                ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t))),
+                (
+                    "mixed-encodings",
+                    Box::new(|d, t| generate_mixed_encodings(d, t)),
+                ),
                 ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
-                ("tld_variations", Box::new(|d, t| generate_tld_variations(d, t))),
+                (
+                    "tld_variations",
+                    Box::new(|d, t| generate_tld_variations(d, t)),
+                ),
                 ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
                 ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t))),
             ];
@@ -1343,19 +1348,19 @@ async fn check_domain_status_legacy(domain: &str) -> String {
                             timeout(Duration::from_secs(HTTP_CONTENT_TIMEOUT_SECS), resp.text())
                                 .await
                         {
-                                    let content_lower = content.to_lowercase();
-                                    if content_lower.contains("parked")
-                                        || content_lower.contains("domain for sale")
-                                        || content_lower.contains("this domain may be for sale")
-                                        || content_lower.contains("godaddy")
-                                            && content_lower.contains("parked")
-                                        || content_lower.contains("sedo")
-                                        || content_lower.contains("parking")
-                                        || content_lower.contains("under construction")
-                                        || content_lower.contains("coming soon")
-                                    {
-                                    return "parked".to_string();
-                                }
+                            let content_lower = content.to_lowercase();
+                            if content_lower.contains("parked")
+                                || content_lower.contains("domain for sale")
+                                || content_lower.contains("this domain may be for sale")
+                                || content_lower.contains("godaddy")
+                                    && content_lower.contains("parked")
+                                || content_lower.contains("sedo")
+                                || content_lower.contains("parking")
+                                || content_lower.contains("under construction")
+                                || content_lower.contains("coming soon")
+                            {
+                                return "parked".to_string();
+                            }
                         }
                         return "registered".to_string();
                     }
@@ -1553,15 +1558,10 @@ struct ComboConfig<'a> {
     batch_size: usize,
 }
 
-async fn generate_combo_attacks_streaming(
-    config: &ComboConfig<'_>,
-    _dict_words: &[String],
-) {
+async fn generate_combo_attacks_streaming(config: &ComboConfig<'_>, _dict_words: &[String]) {
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rand::Rng;
-    
-
 
     let mut generated_domains = std::collections::HashSet::new();
     let mut rng = thread_rng();
@@ -1572,29 +1572,68 @@ async fn generate_combo_attacks_streaming(
     #[allow(clippy::type_complexity, clippy::redundant_closure)]
     let all_transformation_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
         ("1337speak", Box::new(|d, t| generate_1337speak(d, t))),
-        ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t))),
+        (
+            "mixed-encodings",
+            Box::new(|d, t| generate_mixed_encodings(d, t)),
+        ),
         ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
         ("keyboard", Box::new(|d, t| generate_misspelling(d, t))),
         ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
         ("word-swap", Box::new(|d, t| generate_word_swaps(d, t))),
         ("bitsquatting", Box::new(|d, t| generate_bitsquatting(d, t))),
-        ("dot-insertion", Box::new(|d, t| generate_dot_insertion(d, t))),
+        (
+            "dot-insertion",
+            Box::new(|d, t| generate_dot_insertion(d, t)),
+        ),
         ("dot-omission", Box::new(|d, t| generate_dot_omission(d, t))),
-        ("cardinal-substitution", Box::new(|d, t| generate_cardinal_substitution(d, t))),
-        ("ordinal-substitution", Box::new(|d, t| generate_ordinal_substitution(d, t))),
+        (
+            "cardinal-substitution",
+            Box::new(|d, t| generate_cardinal_substitution(d, t)),
+        ),
+        (
+            "ordinal-substitution",
+            Box::new(|d, t| generate_ordinal_substitution(d, t)),
+        ),
         ("homophones", Box::new(|d, t| generate_homophones(d, t))),
-        ("singular-plural", Box::new(|d, t| generate_singular_plural(d, t))),
-        ("cyrillic-comprehensive", Box::new(|d, t| generate_mixed_encodings(d, t))),
-        ("tld-variations", Box::new(|d, t| generate_tld_variations(d, t))),
-        ("brand-confusion", Box::new(|d, t| generate_brand_confusion(d, t))),
+        (
+            "singular-plural",
+            Box::new(|d, t| generate_singular_plural(d, t)),
+        ),
+        (
+            "cyrillic-comprehensive",
+            Box::new(|d, t| generate_mixed_encodings(d, t)),
+        ),
+        (
+            "tld-variations",
+            Box::new(|d, t| generate_tld_variations(d, t)),
+        ),
+        (
+            "brand-confusion",
+            Box::new(|d, t| generate_brand_confusion(d, t)),
+        ),
         ("intl-tld", Box::new(|d, t| generate_intl_tld(d, t))),
         ("cognitive", Box::new(|d, t| generate_cognitive(d, t))),
-        ("dot-hyphen-sub", Box::new(|d, t| generate_dot_hyphen_substitution(d, t))),
-        ("subdomain", Box::new(|d, t| generate_subdomain_injection(d, t))),
-        ("combosquatting", Box::new(|d, t| generate_combosquatting(d, t, _dict_words))),
+        (
+            "dot-hyphen-sub",
+            Box::new(|d, t| generate_dot_hyphen_substitution(d, t)),
+        ),
+        (
+            "subdomain",
+            Box::new(|d, t| generate_subdomain_injection(d, t)),
+        ),
+        (
+            "combosquatting",
+            Box::new(|d, t| generate_combosquatting(d, t, _dict_words)),
+        ),
         ("wrong-sld", Box::new(|d, t| generate_wrong_sld(d, t))),
-        ("domain-prefix", Box::new(|d, t| generate_domain_prefix(d, t))),
-        ("domain-suffix", Box::new(|d, t| generate_domain_suffix(d, t))),
+        (
+            "domain-prefix",
+            Box::new(|d, t| generate_domain_prefix(d, t)),
+        ),
+        (
+            "domain-suffix",
+            Box::new(|d, t| generate_domain_suffix(d, t)),
+        ),
     ];
 
     // Filter transformation functions based on enabled transformations
@@ -2873,9 +2912,21 @@ fn generate_realistic_combinations(
                                 for &(pos3, error_type3, replacement3) in
                                     character_errors[k].iter().take(1)
                                 {
-                                    let error1 = ErrorSpec { pos: pos1, error_type: error_type1.to_string(), replacement: replacement1 };
-                                    let error2 = ErrorSpec { pos: pos2, error_type: error_type2.to_string(), replacement: replacement2 };
-                                    let error3 = ErrorSpec { pos: pos3, error_type: error_type3.to_string(), replacement: replacement3 };
+                                    let error1 = ErrorSpec {
+                                        pos: pos1,
+                                        error_type: error_type1.to_string(),
+                                        replacement: replacement1,
+                                    };
+                                    let error2 = ErrorSpec {
+                                        pos: pos2,
+                                        error_type: error_type2.to_string(),
+                                        replacement: replacement2,
+                                    };
+                                    let error3 = ErrorSpec {
+                                        pos: pos3,
+                                        error_type: error_type3.to_string(),
+                                        replacement: replacement3,
+                                    };
                                     let result = apply_triple_error(
                                         original_chars,
                                         &error1,
@@ -3025,12 +3076,24 @@ fn apply_triple_error(
 
     // Adjust position for third error based on insertions from first two errors
     let adjusted_pos3 = if error3.pos > error2.pos && error3.pos > error1.pos {
-        error3.pos + count_insertions_before(error3.pos, error1.pos, &error1.error_type, error2.pos, &error2.error_type)
+        error3.pos
+            + count_insertions_before(
+                error3.pos,
+                error1.pos,
+                &error1.error_type,
+                error2.pos,
+                &error2.error_type,
+            )
     } else {
         error3.pos
     };
 
-    apply_single_error(&double_chars, adjusted_pos3, &error3.error_type, error3.replacement)
+    apply_single_error(
+        &double_chars,
+        adjusted_pos3,
+        &error3.error_type,
+        error3.replacement,
+    )
 }
 
 fn count_insertions_before(
