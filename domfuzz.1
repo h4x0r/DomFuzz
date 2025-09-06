@@ -51,27 +51,201 @@ Advanced character-level modifications that create visually similar domains:
 
 .TP
 .B 1337speak
-Leetspeak character substitution with realistic combinations. Uses common internet slang replacements (o→0, l→1, e→3, a→@, s→$) applied individually or in combinations for longer domains. Maximum 40% of characters can be substituted with realistic spacing constraints.
+Leetspeak (also known as "leet" or "1337") is a form of internet slang that replaces letters with visually similar numbers and symbols. This transformation simulates how attackers create typosquatting domains using character substitutions that are immediately recognizable to users but visually deceptive. The algorithm applies common internet culture replacements either individually or in realistic combinations.
 .br
-Examples: google.com → g00gle.com, goog1e.com, g@@gl3.com
+.br
+\fBCharacter mappings:\fR
+.br
+• \fBo → 0\fR: The most common substitution, as zero and letter 'o' are nearly identical
+.br
+• \fBl → 1\fR: Lowercase 'l' and number '1' often appear identical in many fonts
+.br
+• \fBe → 3\fR: The number '3' resembles a backwards 'E'
+.br
+• \fBa → @\fR: The at-symbol contains the letter 'a' shape
+.br
+• \fBs → $\fR: The dollar sign resembles an 'S' with lines through it
+.br
+• \fBi → !\fR: Exclamation point resembles lowercase 'i' without the dot
+.br
+• \fBt → 7\fR: The number '7' can resemble a 't' in certain fonts
+.br
+• \fBg → 9\fR: The number '9' bears some resemblance to 'g'
+.br
+.br
+\fBIntelligent application:\fR
+.br
+• Respects domain length (longer domains allow more substitutions)
+.br
+• Maximum 40% character substitution to maintain readability
+.br
+• Realistic spacing prevents consecutive substitutions in short domains
+.br
+• Prioritizes high-impact substitutions (o→0, l→1) for maximum visual similarity
+.br
+.br
+\fBReal-world examples:\fR
+.br
+google.com → g00gle.com, g0ogle.com, goog1e.com, 9oogle.com
+.br
+amazon.com → amaz0n.com, @mazon.com, @m@z0n.com
+.br
+paypal.com → paypa1.com, p@ypal.com, p@yp@l.com
+.br
+microsoft.com → m!crosoft.com, micr0soft.com, micr0$0ft.com
 
 .TP
 .B misspelling
-Consolidated typing error simulation with realistic combinations. Includes character insertion, deletion, transposition, keyboard adjacent-key substitution, and vowel swaps. Uses sophisticated constraints based on domain length to simulate natural typing patterns.
+Comprehensive typing error simulation that models the most common mistakes users make when entering domain names. This transformation consolidates multiple error types into a single, realistic algorithm that respects natural typing patterns and constraints. It simulates both accidental errors (typos, slips) and cognitive errors (transpositions, substitutions).
 .br
-Examples: google.com → googlle.com (insertion), gogle.com (deletion), googel.com (transposition), googke.com (keyboard), guogle.com (vowel)
+.br
+\fBError types implemented:\fR
+.br
+• \fBCharacter deletion\fR: Accidentally skip a letter while typing
+.br
+• \fBCharacter insertion\fR: Accidentally hit an extra key or double-type
+.br
+• \fBCharacter transposition\fR: Swap two adjacent characters (very common error)
+.br
+• \fBCharacter substitution\fR: Hit a wrong key, often adjacent to correct key
+.br
+• \fBVowel swapping\fR: Confuse similar vowel sounds (a/e, o/u, i/e)
+.br
+• \fBKeyboard adjacent errors\fR: Hit keys physically next to the intended key
+.br
+.br
+\fBIntelligent error modeling:\fR
+.br
+• Frequency-based error placement (more errors in middle of words)
+.br
+• Length-aware constraints (shorter domains get fewer errors)
+.br
+• Realistic error combinations (1-3 errors per domain maximum)
+.br
+• Position weighting (avoids errors at start/end of short domains)
+.br
+• QWERTY keyboard layout modeling for adjacent key errors
+.br
+.br
+\fBReal-world examples:\fR
+.br
+google.com → googlle.com (double-l insertion), gogle.com (o deletion)
+.br
+amazon.com → amazno.com (transposition), amozon.com (a→o vowel swap)
+.br
+paypal.com → paypla.com (transposition), oaypal.com (adjacent key p→o)
+.br
+facebook.com → facbook.com (e deletion), faceboook.com (o insertion)
+.br
+microsoft.com → microsfot.com (transposition), microsift.com (o→i substitution)
 
 .TP
 .B fat-finger
-Character repetition and adjacent-key insertion errors with realistic combinations. Simulates when users accidentally repeat keystrokes or hit adjacent keys. Applies constraints to prevent unrealistic error patterns.
+Models accidental keypresses that occur when users type too quickly or press keys imprecisely. This transformation simulates the "fat finger" effect where users accidentally hit multiple keys or keys adjacent to their target. The algorithm focuses specifically on key repetition and insertion errors that result from imprecise finger placement or timing.
 .br
-Examples: google.com → gooogle.com (repetition), googke.com (adjacent key), gpogle.com (adjacent insertion)
+.br
+\fBError mechanisms:\fR
+.br
+• \fBCharacter doubling\fR: Hold key too long or press twice accidentally
+.br
+• \fBAdjacent key insertion\fR: Press extra key next to intended target
+.br
+• \fBMultiple adjacent errors\fR: Several finger placement errors in same domain
+.br
+• \fBTyping speed errors\fR: Errors that occur during fast typing
+.br
+.br
+\fBQWERTY adjacency modeling:\fR
+.br
+• Horizontal adjacency: q↔w↔e↔r↔t↔y, a↔s↔d↔f↔g↔h, z↔x↔c↔v↔b↔n
+.br
+• Vertical adjacency: q↔a↔z, w↔s↔x, e↔d↔c, r↔f↔v, t↔g↔b, etc.
+.br
+• Diagonal adjacency: q↔s, w↔a↔d, e↔s↔f, etc.
+.br
+• Common mistakes: o↔p, l↔;, n↔m, etc.
+.br
+.br
+\fBRealistic constraints:\fR
+.br
+• Prevents excessive repetition (max 2-3 repeated characters)
+.br
+• Limits adjacent errors to maintain readability
+.br
+• Frequency-based placement (more errors in frequently-hit keys)
+.br
+• Length-appropriate error density
+.br
+.br
+\fBReal-world examples:\fR
+.br
+google.com → gooogle.com (o repetition), googgle.com (g repetition)
+.br
+amazon.com → amazoon.com (o doubling), amaozn.com (adjacent z→o)
+.br
+paypal.com → paypall.com (l doubling), paypakl.com (adjacent l→k)
+.br
+facebook.com → facebookk.com (k doubling), favebook.com (adjacent c→v)
+.br
+microsoft.com → microosoft.com (o doubling), microsofft.com (f doubling)
 
 .TP
 .B mixed-encodings
-Comprehensive Unicode transformations with realistic combinations. Includes homoglyph substitution (Latin vs Cyrillic), IDN homograph attacks, mixed-script combinations, and extended Unicode substitutions. Up to 60% of characters can use Unicode alternatives.
+Advanced Unicode-based homograph attack that exploits visually identical characters from different writing systems to create deceptive domains. This is one of the most sophisticated and dangerous transformation types, as the resulting domains are virtually indistinguishable from legitimate ones in most fonts and browsers. The technique leverages the vast Unicode character set to find lookalike characters from various scripts.
 .br
-Examples: google.com → gооgle.com (Cyrillic о), xn--oogle-qmc.com (Punycode), gοοglе.com (mixed script)
+.br
+\fBHomograph attack vectors:\fR
+.br
+• \fBCyrillic substitutions\fR: Latin letters replaced with identical Cyrillic letters
+.br
+• \fBGreek substitutions\fR: Latin letters replaced with identical Greek letters
+.br
+• \fBMultiple script mixing\fR: Combining different writing systems in one domain
+.br
+• \fBExtended Unicode\fR: Less common but visually identical characters
+.br
+• \fBPunycode encoding\fR: ASCII-compatible encoding revealing the attack
+.br
+.br
+\fBCommon character substitutions:\fR
+.br
+• \fBLatin 'a' (U+0061) → Cyrillic 'а' (U+0430)\fR: Identical appearance
+.br
+• \fBLatin 'o' (U+006F) → Cyrillic 'о' (U+043E)\fR: Perfect visual match
+.br
+• \fBLatin 'e' (U+0065) → Cyrillic 'е' (U+0435)\fR: Indistinguishable
+.br
+• \fBLatin 'p' (U+0070) → Cyrillic 'р' (U+0440)\fR: Identical shape
+.br
+• \fBLatin 'o' (U+006F) → Greek 'ο' (U+03BF)\fR: Same visual representation
+.br
+• \fBLatin 'c' (U+0063) → Cyrillic 'с' (U+0441)\fR: Perfect lookalike
+.br
+.br
+\fBTechnical implementation:\fR
+.br
+• Browser display: Domains appear identical to users
+.br
+• Punycode encoding: xn--prefix reveals non-ASCII characters
+.br
+• DNS resolution: Works normally, pointing to attacker infrastructure
+.br
+• Certificate validation: Browsers may show warnings for mixed scripts
+.br
+• Detection difficulty: Extremely hard for users to detect visually
+.br
+.br
+\fBReal-world examples:\fR
+.br
+google.com → gооgle.com (Cyrillic о characters, Punycode: xn--ggle-55da0q)
+.br
+paypal.com → pаypal.com (Cyrillic а, Punycode: xn--pypal-4ve)
+.br
+amazon.com → аmazon.com (Cyrillic а, Punycode: xn--mazon-3ve)
+.br
+apple.com → аpple.com (Cyrillic а, Punycode: xn--pple-43d)
+.br
+microsoft.com → microsοft.com (Greek ο, Punycode: xn--microsooft-99b)
 
 .TP
 .B bitsquatting
@@ -204,9 +378,83 @@ Logical groupings of related transformations:
 
 .TP
 .B lookalike
-Character-level transformations that create visually similar domains. Includes: 1337speak, misspelling, fat-finger, mixed-encodings. This is the default bundle.
+Character-level transformations that create visually similar domains. This is the default transformation bundle, specifically designed to generate domains that can fool users through visual deception. The lookalike bundle combines four core transformation types that attackers commonly use in phishing campaigns and typosquatting attacks.
 .br
-Examples: google.com → g00gle.com (1337speak), googlle.com (misspelling), gooogle.com (fat-finger), gооgle.com (mixed-encodings)
+.br
+The lookalike bundle includes the following transformations:
+.br
+.br
+\fB1. 1337speak (Leet Speak)\fR - Replaces letters with visually similar numbers and symbols:
+.br
+  • \fBo → 0\fR (zero): google.com → g00gle.com, amazon.com → amaz0n.com
+.br
+  • \fBl → 1\fR (one): paypal.com → paypa1.com, apple.com → app1e.com  
+.br
+  • \fBe → 3\fR (three): facebook.com → fac3book.com, secure.com → s3cur3.com
+.br
+  • \fBa → @\fR (at symbol): bank.com → b@nk.com, amazon.com → @m@zon.com
+.br
+  • \fBs → $\fR (dollar): store.com → $tore.com, site.com → $ite.com
+.br
+  • \fBi → !\fR (exclamation): microsoft.com → m!crosoft.com
+.br
+  • \fBt → 7\fR (seven): twitter.com → 7witter.com, target.com → 7arget.com
+.br
+  • \fBg → 9\fR (nine): google.com → 9oogle.com, github.com → 9ithub.com
+.br
+  Multiple substitutions per domain: google.com → g00gl3.com, 900gl3.com
+.br
+.br
+\fB2. misspelling\fR - Simulates common typing errors and mistakes:
+.br
+  • \fBCharacter deletion\fR: Remove one letter → google.com → gogle.com, amazon.com → amazn.com
+.br
+  • \fBCharacter insertion\fR: Add extra letter → google.com → googlle.com, bank.com → baank.com
+.br
+  • \fBCharacter transposition\fR: Swap adjacent letters → google.com → googel.com, paypal.com → payapl.com
+.br
+  • \fBCharacter substitution\fR: Replace with similar letter → google.com → googke.com, microsoft.com → microsoct.com
+.br
+  • \fBVowel swapping\fR: Replace vowels → amazon.com → emezen.com, apple.com → epple.com
+.br
+  • \fBKeyboard adjacent errors\fR: Hit nearby key → google.com → hoogle.com (g→h), facebook.com → dacebook.com (f→d)
+.br
+.br
+\fB3. fat-finger\fR - Models accidental key repetition and adjacent key presses:
+.br
+  • \fBCharacter doubling\fR: Accidentally repeat keystroke → google.com → gooogle.com, apple.com → appple.com
+.br
+  • \fBAdjacent key insertion\fR: Hit extra key next to target → google.com → gpooogle.com (p next to o)
+.br
+  • \fBFat finger combinations\fR: Multiple adjacent errors → microsoft.com → microsooft.com
+.br
+  • \fBCommon patterns\fR: amazon.com → amazoon.com, facebook.com → facebookk.com
+.br
+.br
+\fB4. mixed-encodings (Homograph Attack)\fR - Uses visually identical Unicode characters:
+.br
+  • \fBCyrillic lookalikes\fR: Latin 'a' vs Cyrillic 'а' (different Unicode) → paypal.com → pаypal.com
+.br
+  • \fBGreek substitutions\fR: Latin 'o' vs Greek 'ο' → google.com → gοοgle.com
+.br
+  • \fBAdvanced homoglyphs\fR: apple.com → аpple.com (Cyrillic а), microsοft.com (Greek ο)
+.br
+  • \fBPunycode encoding\fR: These render as xn--paypl-g0a.com in ASCII-compatible encoding
+.br
+  • \fBMultiple script mixing\fR: google.com → gοоgle.com (mixing Greek ο and Cyrillic о)
+.br
+.br
+\fBWhy lookalike is the default:\fR This bundle represents the most dangerous and commonly used techniques in real-world attacks. These transformations are specifically chosen because they:
+.br
+• Create domains that look nearly identical to the original
+.br
+• Are difficult for users to spot, especially on mobile devices
+.br
+• Require no technical sophistication from attackers
+.br
+• Have high success rates in phishing campaigns
+.br
+• Cover both automated (typos, fat-finger) and intentional (1337speak, homographs) attack vectors
 
 .TP
 .B system-fault
