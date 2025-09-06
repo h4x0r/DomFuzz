@@ -23,7 +23,7 @@ jobs:
         components: rustfmt, clippy
     
     - name: Cache cargo registry
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -63,7 +63,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     
     - name: Cache cargo registry
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -94,7 +94,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     
     - name: Cache cargo registry
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
@@ -131,7 +131,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     
     - name: Cache cargo registry
-      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cargo/registry
