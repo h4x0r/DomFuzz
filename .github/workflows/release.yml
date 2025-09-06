@@ -65,12 +65,12 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
       with:
         targets: ${{ matrix.target }}
     
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
       with:
         path: |
           ~/.cargo/registry
@@ -105,7 +105,7 @@ jobs:
     
     - name: Upload Release Asset (tar.gz)
       if: matrix.archive == 'tar.gz'
-      uses: actions/upload-release-asset@26e18899d0e8c16a14afbc25ff020c2adebe2a7b # v1.0.2
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -116,7 +116,7 @@ jobs:
     
     - name: Upload Release Asset (zip)
       if: matrix.archive == 'zip'
-      uses: actions/upload-release-asset@26e18899d0e8c16a14afbc25ff020c2adebe2a7b # v1.0.2
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -134,7 +134,7 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
     
     - name: Install cargo-audit
       run: cargo install --locked cargo-audit
