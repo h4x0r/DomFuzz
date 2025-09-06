@@ -136,7 +136,7 @@ fn parse_similarity_threshold(input: &str) -> Result<f64, String> {
         let percentage_str = input.trim_end_matches('%');
         match percentage_str.parse::<f64>() {
             Ok(percentage) => {
-                if percentage < 0.0 || percentage > 100.0 {
+                if !(0.0..=100.0).contains(&percentage) {
                     Err(format!(
                         "Percentage must be between 0% and 100%, got: {}%",
                         percentage
@@ -151,7 +151,7 @@ fn parse_similarity_threshold(input: &str) -> Result<f64, String> {
         // Parse decimal format (e.g., "0.7328")
         match input.parse::<f64>() {
             Ok(decimal) => {
-                if decimal < 0.0 || decimal > 1.0 {
+                if !(0.0..=1.0).contains(&decimal) {
                     Err(format!(
                         "Decimal threshold must be between 0.0 and 1.0, got: {}",
                         decimal
@@ -310,20 +310,20 @@ async fn main() {
         } else {
             None
         };
-        generate_combo_attacks_streaming(
-            &domain_name,
-            &tld,
-            combo_limit,
-            &dict_words,
-            cli.verbose,
-            cli.only_registered,
-            cli.only_available,
-            output_limit,
+        let config = ComboConfig {
+            domain: &domain_name,
+            tld: &tld,
+            max_variations: combo_limit,
+            verbose: cli.verbose,
+            only_registered: cli.only_registered,
+            only_available: cli.only_available,
+            output_count: output_limit,
             check_status,
-            &enabled_transformations,
-            parsed_min_similarity,
-            cli.batch_size,
-        )
+            enabled_transformations: &enabled_transformations,
+            min_similarity: parsed_min_similarity,
+            batch_size: cli.batch_size,
+        };
+        generate_combo_attacks_streaming(&config, &dict_words)
         .await;
         // Combo mode now handles its own output and status checking
         return;
@@ -831,19 +831,14 @@ async fn main() {
             let mut rng = thread_rng();
 
             // Define available generators
-            let generators: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
-                ("char_sub", Box::new(|d, t| generate_1337speak(d, t))),
-                (
-                    "mixed-encodings",
-                    Box::new(|d, t| generate_mixed_encodings(d, t)),
-                ),
-                ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
-                (
-                    "tld_variations",
-                    Box::new(|d, t| generate_tld_variations(d, t)),
-                ),
-                ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
-                ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t))),
+            type GeneratorFn = Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>;
+            let generators: Vec<(&str, GeneratorFn)> = vec![
+                ("char_sub", Box::new(|d, t| generate_1337speak(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+                ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+                ("misspelling", Box::new(|d, t| generate_misspelling(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+                ("tld_variations", Box::new(|d, t| generate_tld_variations(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+                ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+                ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
             ];
 
             while additional_variations.len() < target_additional && attempts < max_attempts {
@@ -1336,19 +1331,17 @@ async fn check_domain_status_legacy(domain: &str) -> String {
             // Try HTTP first, then HTTPS
             for protocol in ["http", "https"] {
                 let url = format!("{}://{}", protocol, domain);
-                if let Ok(response) = timeout(
+                if let Ok(Ok(resp)) = timeout(
                     Duration::from_secs(HTTP_TIMEOUT_SECS),
                     HTTP_CLIENT.get(&url).send(),
                 )
                 .await
                 {
-                    if let Ok(resp) = response {
-                        if resp.status().is_success() {
-                            if let Ok(text) =
-                                timeout(Duration::from_secs(HTTP_CONTENT_TIMEOUT_SECS), resp.text())
-                                    .await
-                            {
-                                if let Ok(content) = text {
+                    if resp.status().is_success() {
+                        if let Ok(Ok(content)) =
+                            timeout(Duration::from_secs(HTTP_CONTENT_TIMEOUT_SECS), resp.text())
+                                .await
+                        {
                                     let content_lower = content.to_lowercase();
                                     if content_lower.contains("parked")
                                         || content_lower.contains("domain for sale")
@@ -1360,12 +1353,10 @@ async fn check_domain_status_legacy(domain: &str) -> String {
                                         || content_lower.contains("under construction")
                                         || content_lower.contains("coming soon")
                                     {
-                                        return "parked".to_string();
-                                    }
+                                    return "parked".to_string();
                                 }
-                            }
-                            return "registered".to_string();
                         }
+                        return "registered".to_string();
                     }
                 }
             }
@@ -1378,7 +1369,7 @@ async fn check_domain_status_legacy(domain: &str) -> String {
 }
 
 async fn check_whois(domain: &str) -> DomainCheckResult<String> {
-    let tld = domain.split('.').last().unwrap_or("");
+    let tld = domain.split('.').next_back().unwrap_or("");
     let whois_server = get_whois_server(tld);
 
     // Connect to WHOIS server
@@ -1547,23 +1538,29 @@ fn clear_progress_line() {
 }
 
 // New function that collects results instead of printing immediately with concurrent domain checking
-async fn generate_combo_attacks_streaming(
-    domain: &str,
-    tld: &str,
+struct ComboConfig<'a> {
+    domain: &'a str,
+    tld: &'a str,
     max_variations: Option<usize>,
-    _dict_words: &[String],
     verbose: bool,
     only_registered: bool,
     only_available: bool,
     output_count: usize,
     check_status: bool,
-    enabled_transformations: &std::collections::HashSet<String>,
+    enabled_transformations: &'a std::collections::HashSet<String>,
     min_similarity: Option<f64>,
     batch_size: usize,
+}
+
+async fn generate_combo_attacks_streaming(
+    config: &ComboConfig<'_>,
+    _dict_words: &[String],
 ) {
     use rand::seq::SliceRandom;
     use rand::thread_rng;
     use rand::Rng;
+    
+    type GeneratorFn = Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>;
 
     let mut generated_domains = std::collections::HashSet::new();
     let mut rng = thread_rng();
@@ -1571,106 +1568,64 @@ async fn generate_combo_attacks_streaming(
     let mut total_output_count = 0;
 
     // Define all available transformation functions with names matching CLI arguments
-    let all_transformation_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
+    let all_transformation_functions = vec![
         ("1337speak", Box::new(|d, t| generate_1337speak(d, t))),
-        (
-            "mixed-encodings",
-            Box::new(|d, t| generate_mixed_encodings(d, t)),
-        ),
-        ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
-        ("keyboard", Box::new(|d, t| generate_misspelling(d, t))),
-        ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
-        ("word-swap", Box::new(|d, t| generate_word_swaps(d, t))),
-        ("bitsquatting", Box::new(|d, t| generate_bitsquatting(d, t))),
-        (
-            "dot-insertion",
-            Box::new(|d, t| generate_dot_insertion(d, t)),
-        ),
-        ("dot-omission", Box::new(|d, t| generate_dot_omission(d, t))),
-        ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
-        ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
-        (
-            "cardinal-substitution",
-            Box::new(|d, t| generate_cardinal_substitution(d, t)),
-        ),
-        (
-            "ordinal-substitution",
-            Box::new(|d, t| generate_ordinal_substitution(d, t)),
-        ),
-        ("homophones", Box::new(|d, t| generate_homophones(d, t))),
-        (
-            "singular-plural",
-            Box::new(|d, t| generate_singular_plural(d, t)),
-        ),
-        (
-            "cyrillic-comprehensive",
-            Box::new(|d, t| generate_mixed_encodings(d, t)),
-        ),
-        (
-            "tld-variations",
-            Box::new(|d, t| generate_tld_variations(d, t)),
-        ),
-        (
-            "mixed-encodings",
-            Box::new(|d, t| generate_mixed_encodings(d, t)),
-        ),
-        (
-            "mixed-encodings",
-            Box::new(|d, t| generate_mixed_encodings(d, t)),
-        ),
-        (
-            "mixed-encodings",
-            Box::new(|d, t| generate_mixed_encodings(d, t)),
-        ),
-        (
-            "brand-confusion",
-            Box::new(|d, t| generate_brand_confusion(d, t)),
-        ),
-        ("intl-tld", Box::new(|d, t| generate_intl_tld(d, t))),
-        ("cognitive", Box::new(|d, t| generate_cognitive(d, t))),
-        (
-            "dot-hyphen-sub",
-            Box::new(|d, t| generate_dot_hyphen_substitution(d, t)),
-        ),
+        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("misspelling", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("keyboard", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("fat-finger", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("word-swap", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("bitsquatting", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("dot-insertion", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("dot-omission", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("misspelling", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("fat-finger", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("cardinal-substitution", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("ordinal-substitution", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("homophones", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("singular-plural", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("cyrillic-comprehensive", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("tld-variations", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("brand-confusion", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("intl-tld", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("cognitive", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("dot-hyphen-sub", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
         (
             "subdomain",
-            Box::new(|d, t| generate_subdomain_injection(d, t)),
+            Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>,
         ),
         (
             "combosquatting",
-            Box::new(|d, t| generate_combosquatting(d, t, _dict_words)),
+            Box::new(|d, t| generate_combosquatting(d, t, _dict_words)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>,
         ),
-        ("wrong-sld", Box::new(|d, t| generate_wrong_sld(d, t))),
-        (
-            "domain-prefix",
-            Box::new(|d, t| generate_domain_prefix(d, t)),
-        ),
-        (
-            "domain-suffix",
-            Box::new(|d, t| generate_domain_suffix(d, t)),
-        ),
+        ("wrong-sld", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("domain-prefix", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("domain-suffix", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
     ];
 
     // Filter transformation functions based on enabled transformations
-    let transformation_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> =
+    let transformation_functions =
         all_transformation_functions
             .into_iter()
-            .filter(|(name, _)| enabled_transformations.contains(*name))
+            .filter(|(name, _)| config.enabled_transformations.contains(*name))
             .collect();
 
     // Generate combo variations by applying random sequences of transformations
-    let target_variations = max_variations.unwrap_or(usize::MAX); // Unlimited by default
+    let target_variations = config.max_variations.unwrap_or(usize::MAX); // Unlimited by default
     let mut attempts = 0;
-    let max_attempts = max_variations.map_or(usize::MAX, |max| max * 10); // Unlimited attempts for unlimited generation
+    let max_attempts = config.max_variations.map_or(usize::MAX, |max| max * 10); // Unlimited attempts for unlimited generation
 
-    while (max_variations.is_none() || total_output_count < target_variations)
+    while (config.max_variations.is_none() || total_output_count < target_variations)
         && attempts < max_attempts
-        && total_output_count < output_count
+        && total_output_count < config.output_count
     {
         attempts += 1;
 
-        let mut current_domain = domain.to_string();
-        let mut current_tld = tld.to_string();
+        let mut current_domain = config.domain.to_string();
+        let mut current_tld = config.tld.to_string();
         let mut applied_attacks: Vec<&str> = Vec::new();
 
         // Randomly choose number of transformations (1-5)
@@ -1685,22 +1640,22 @@ async fn generate_combo_attacks_streaming(
                 let transformation_results = transformation_fn(&current_domain, &current_tld);
                 if !transformation_results.is_empty() {
                     if let Some(selected_result) = transformation_results.choose(&mut rng) {
-                        if verbose {
-                            let original_domain = format!("{}.{}", domain, tld);
+                        if config.verbose {
+                            let original_domain = format!("{}.{}", config.domain, config.tld);
                             let score = calculate_similarity(
                                 &original_domain,
                                 selected_result,
                                 attack_name,
                             );
-                            eprintln!("  Applied {} transformation: {} -> {} (visual:{:.3}, cognitive:{:.3}, combined:{:.3})", 
-                                attack_name, format!("{}.{}", current_domain, current_tld), selected_result,
+                            eprintln!("  Applied {} transformation: {}.{} -> {} (visual:{:.3}, cognitive:{:.3}, combined:{:.3})", 
+                                attack_name, current_domain, current_tld, selected_result,
                                 score.visual_score, score.cognitive_score, score.combined_score);
                         }
                         // Parse the result to separate domain and TLD for next iteration
                         let (parsed_domain, parsed_tld) = parse_domain(selected_result);
                         current_domain = parsed_domain;
                         current_tld = parsed_tld;
-                        applied_attacks.push(*attack_name);
+                        applied_attacks.push(attack_name);
                     }
                 }
             }
@@ -1710,8 +1665,8 @@ async fn generate_combo_attacks_streaming(
         let final_domain = format!("{}.{}", current_domain, current_tld);
 
         // Only add if we successfully applied at least 1 transformation
-        if applied_attacks.len() >= 1 {
-            let lowercase_original = format!("{}.{}", domain, tld).to_lowercase();
+        if !applied_attacks.is_empty() {
+            let lowercase_original = format!("{}.{}", config.domain, config.tld).to_lowercase();
 
             if final_domain.to_lowercase() != lowercase_original
                 && !generated_domains.contains(&final_domain)
@@ -1720,11 +1675,11 @@ async fn generate_combo_attacks_streaming(
                 generated_domains.insert(final_domain.clone());
 
                 // Calculate similarity score
-                let original_domain = format!("{}.{}", domain, tld);
+                let original_domain = format!("{}.{}", config.domain, config.tld);
                 let score = calculate_similarity(&original_domain, &final_domain, "combo");
 
                 // Check if this domain meets minimum similarity threshold
-                let meets_threshold = if let Some(min_sim) = min_similarity {
+                let meets_threshold = if let Some(min_sim) = config.min_similarity {
                     score.combined_score >= min_sim
                 } else {
                     true // No threshold specified, accept all domains
@@ -1735,14 +1690,14 @@ async fn generate_combo_attacks_streaming(
                     current_batch.push((final_domain, score));
 
                     // Process batch when it reaches the specified size
-                    if current_batch.len() >= batch_size {
+                    if current_batch.len() >= config.batch_size {
                         let batch_count = process_batch(
                             &mut current_batch,
-                            check_status,
-                            only_registered,
-                            only_available,
+                            config.check_status,
+                            config.only_registered,
+                            config.only_available,
                             &mut total_output_count,
-                            output_count,
+                            config.output_count,
                         )
                         .await;
                         if batch_count == 0 {
@@ -1756,14 +1711,14 @@ async fn generate_combo_attacks_streaming(
     }
 
     // Process any remaining domains in the final batch
-    if !current_batch.is_empty() && total_output_count < output_count {
+    if !current_batch.is_empty() && total_output_count < config.output_count {
         process_batch(
             &mut current_batch,
-            check_status,
-            only_registered,
-            only_available,
+            config.check_status,
+            config.only_registered,
+            config.only_available,
             &mut total_output_count,
-            output_count,
+            config.output_count,
         )
         .await;
     }
@@ -1937,7 +1892,7 @@ fn generate_1337speak(domain: &str, tld: &str) -> Vec<String> {
     }
 
     // Apply realistic constraints similar to fat-finger
-    let max_errors = ((chars.len() as f32 * 0.4).ceil() as usize).max(1).min(3);
+    let max_errors = ((chars.len() as f32 * 0.4).ceil() as usize).clamp(1, 3);
     let max_length = (domain_lower.len() as f32 * 1.2) as usize; // 1337speak doesn't typically increase length much
 
     generate_realistic_combinations(
@@ -2520,7 +2475,7 @@ fn generate_misspelling_combinations(
             if let Some(result_domain) = result {
                 if result_domain != domain
                     && result_domain.len() <= max_length
-                    && result_domain.len() >= 1
+                    && !result_domain.is_empty()
                 {
                     variations.push(format!("{}.{}", result_domain, tld));
                 }
@@ -2558,7 +2513,7 @@ fn generate_misspelling_combinations(
                                 if let Some(result_domain) = result {
                                     if result_domain != domain
                                         && result_domain.len() <= max_length
-                                        && result_domain.len() >= 1
+                                        && !result_domain.is_empty()
                                     {
                                         variations.push(format!("{}.{}", result_domain, tld));
                                     }
@@ -2926,17 +2881,14 @@ fn generate_realistic_combinations(
                                 for &(pos3, error_type3, replacement3) in
                                     character_errors[k].iter().take(1)
                                 {
+                                    let error1 = ErrorSpec { pos: pos1, error_type: error_type1.to_string(), replacement: replacement1 };
+                                    let error2 = ErrorSpec { pos: pos2, error_type: error_type2.to_string(), replacement: replacement2 };
+                                    let error3 = ErrorSpec { pos: pos3, error_type: error_type3.to_string(), replacement: replacement3 };
                                     let result = apply_triple_error(
                                         original_chars,
-                                        pos1,
-                                        error_type1,
-                                        replacement1,
-                                        pos2,
-                                        error_type2,
-                                        replacement2,
-                                        pos3,
-                                        error_type3,
-                                        replacement3,
+                                        &error1,
+                                        &error2,
+                                        &error3,
                                     );
                                     if let Some(result_domain) = result {
                                         if result_domain != domain
@@ -3054,38 +3006,39 @@ fn apply_double_error(
     Some(result_chars.iter().collect())
 }
 
+#[derive(Clone)]
+struct ErrorSpec {
+    pos: usize,
+    error_type: String,
+    replacement: char,
+}
+
 fn apply_triple_error(
     chars: &[char],
-    pos1: usize,
-    error_type1: &str,
-    replacement1: char,
-    pos2: usize,
-    error_type2: &str,
-    replacement2: char,
-    pos3: usize,
-    error_type3: &str,
-    replacement3: char,
+    error1: &ErrorSpec,
+    error2: &ErrorSpec,
+    error3: &ErrorSpec,
 ) -> Option<String> {
     // Apply double error first, then add third error
     let double_result = apply_double_error(
         chars,
-        pos1,
-        error_type1,
-        replacement1,
-        pos2,
-        error_type2,
-        replacement2,
+        error1.pos,
+        &error1.error_type,
+        error1.replacement,
+        error2.pos,
+        &error2.error_type,
+        error2.replacement,
     )?;
     let double_chars: Vec<char> = double_result.chars().collect();
 
     // Adjust position for third error based on insertions from first two errors
-    let adjusted_pos3 = if pos3 > pos2 && pos3 > pos1 {
-        pos3 + count_insertions_before(pos3, pos1, error_type1, pos2, error_type2)
+    let adjusted_pos3 = if error3.pos > error2.pos && error3.pos > error1.pos {
+        error3.pos + count_insertions_before(error3.pos, error1.pos, &error1.error_type, error2.pos, &error2.error_type)
     } else {
-        pos3
+        error3.pos
     };
 
-    apply_single_error(&double_chars, adjusted_pos3, error_type3, replacement3)
+    apply_single_error(&double_chars, adjusted_pos3, &error3.error_type, error3.replacement)
 }
 
 fn count_insertions_before(
@@ -3117,7 +3070,7 @@ fn load_dictionary(file_path: &str) -> Vec<String> {
 
 fn default_dictionary() -> Vec<String> {
     // Try to load from XDG-compliant user data directory first
-    if let Some(home) = std::env::var("HOME").ok() {
+    if let Ok(home) = std::env::var("HOME") {
         let xdg_dict_path = format!("{}/.local/share/domfuzz/dictionary.txt", home);
         if std::path::Path::new(&xdg_dict_path).exists() {
             return load_dictionary(&xdg_dict_path);
@@ -3661,8 +3614,8 @@ fn levenshtein_distance(s1: &str, s2: &str) -> usize {
     let mut matrix = vec![vec![0usize; len2 + 1]; len1 + 1];
 
     // Initialize first row and column
-    for i in 0..=len1 {
-        matrix[i][0] = i;
+    for (i, row) in matrix.iter_mut().enumerate().take(len1 + 1) {
+        row[0] = i;
     }
     for j in 0..=len2 {
         matrix[0][j] = j;
@@ -3705,7 +3658,7 @@ fn visual_similarity(original: &str, variant: &str) -> f64 {
     // Weight the final score
     similarity = (similarity * 0.7) + (homoglyph_bonus * 0.3);
 
-    similarity.max(0.0).min(1.0)
+    similarity.clamp(0.0, 1.0)
 }
 
 /// Calculate similarity bonus for homoglyph substitutions
@@ -3782,7 +3735,7 @@ fn cognitive_similarity(original: &str, variant: &str) -> f64 {
     let length_penalty = 1.0 - (length_diff / std::cmp::max(original.len(), variant.len()) as f64);
     similarity += length_penalty * 0.3;
 
-    similarity.max(0.0).min(1.0)
+    similarity.clamp(0.0, 1.0)
 }
 
 /// Simple phonetic similarity calculation
