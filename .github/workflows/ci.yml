@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+    
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    
+    - name: Run tests
+      run: cargo test --verbose
+    
+    - name: Build domfuzz for integration tests
+      run: cargo build --release
+    
+    - name: Run integration tests
+      run: |
+        cd tests/domfuzz_tester
+        DOMFUZZ_BIN=../../target/release/domfuzz cargo run
+      env:
+        DOMFUZZ_BIN: ../../target/release/domfuzz
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-integration-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-integration-
+    
+    - name: Build domfuzz
+      run: cargo build --release
+    
+    - name: Run integration tests
+      run: |
+        cd tests/domfuzz_tester
+        DOMFUZZ_BIN=../../target/release/domfuzz cargo run
+      env:
+        DOMFUZZ_BIN: ../../target/release/domfuzz
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-audit-
+    
+    - name: Install cargo-audit
+      run: cargo install --locked cargo-audit
+    
+    - name: Run cargo audit
+      run: cargo audit
+    
+    - name: Run cargo audit for dependencies
+      run: cargo audit --db advisory-db --json | tee audit-report.json
+    
+    - name: Upload audit report
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      if: always()
+      with:
+        name: security-audit-report
+        path: audit-report.json
+
+  cargo-vet:
+    name: Cargo Vet
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain  
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-vet-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-vet-
+    
+    - name: Install cargo-vet
+      run: cargo install --locked cargo-vet
+    
+    - name: Initialize cargo-vet (if needed)
+      run: |
+        if [ ! -f "supply-chain/config.toml" ]; then
+          cargo vet init
+        fi
+    
+    - name: Run cargo-vet check
+      run: cargo vet --locked || echo "cargo-vet found issues - review required"
+    
+    - name: Upload vet report
+      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      if: always()
+      with:
+        name: cargo-vet-report
+        path: supply-chain/

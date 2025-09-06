@@ -1,0 +1,159 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        release_name: DomFuzz ${{ steps.get_version.outputs.version }}
+        body: |
+          ## DomFuzz ${{ steps.get_version.outputs.version }}
+          
+          ### What's New
+          - Domain typosquatting and variation generation tool
+          - 22 transformation algorithms with realistic combinations
+          - Similarity-based sorting and comprehensive documentation
+          
+          ### Downloads
+          - **Windows**: `domfuzz-${{ steps.get_version.outputs.version }}-x86_64-pc-windows-msvc.zip`
+          - **Linux**: `domfuzz-${{ steps.get_version.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz`
+          - **macOS**: `domfuzz-${{ steps.get_version.outputs.version }}-x86_64-apple-darwin.tar.gz`
+          
+          ### Installation
+          ```bash
+          # Extract and run
+          ./domfuzz --help
+          ```
+        draft: false
+        prerelease: false
+
+  build-and-upload:
+    name: Build and Upload
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+      with:
+        toolchain: stable
+        targets: ${{ matrix.target }}
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.target }}-cargo-
+    
+    - name: Build release binary
+      run: cargo build --release --target ${{ matrix.target }} --locked
+    
+    - name: Prepare artifacts (Unix)
+      if: matrix.archive == 'tar.gz'
+      run: |
+        mkdir -p artifacts
+        cp target/${{ matrix.target }}/release/domfuzz artifacts/
+        cp README.md artifacts/
+        cp domfuzz.1 artifacts/ || true
+        cd artifacts
+        tar czf ../domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz *
+    
+    - name: Prepare artifacts (Windows)
+      if: matrix.archive == 'zip'
+      run: |
+        mkdir artifacts
+        cp target/${{ matrix.target }}/release/domfuzz.exe artifacts/
+        cp README.md artifacts/
+        cp domfuzz.1 artifacts/ -ErrorAction SilentlyContinue
+        cd artifacts
+        Compress-Archive -Path * -DestinationPath ../domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.zip
+    
+    - name: Upload Release Asset (tar.gz)
+      if: matrix.archive == 'tar.gz'
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz
+        asset_name: domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.tar.gz
+        asset_content_type: application/gzip
+    
+    - name: Upload Release Asset (zip)
+      if: matrix.archive == 'zip'
+      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.zip
+        asset_name: domfuzz-${{ needs.create-release.outputs.version }}-${{ matrix.target }}.zip
+        asset_content_type: application/zip
+
+  security-check:
+    name: Final Security Check
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
+    
+    - name: Install cargo-audit
+      run: cargo install --locked cargo-audit
+    
+    - name: Final security audit
+      run: cargo audit
+    
+    - name: Comment on release if vulnerabilities found
+      if: failure()
+      run: |
+        echo "Security vulnerabilities detected in release build!"
+        echo "Please review the audit report before using this release."
+        exit 1

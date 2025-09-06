@@ -1,0 +1,8 @@
+[package]
+name = "domfuzz_tester"
+version = "0.1.0"
+edition = "2021"
+authors = ["Agent Mode <agent@warp.dev>"]
+
+[dependencies]
+
