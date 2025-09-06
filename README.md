@@ -311,30 +311,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Changelog
 
-### v0.1.3
-- **BREAKING**: Consolidated overlapping transformations for cleaner architecture
-  - Merged `omission`, `addition`, `double-char-replacement`, `keyboard`, and `vowel-swap` into `misspelling` (vowel-swap functionality is now part of misspelling)
-  - Merged `homoglyphs`, `idn-homograph`, `mixed-script`, `extended-unicode`, and `cyrillic-comprehensive` into `mixed-encodings`
-- **CHANGED**: Default mode is now single transformation (`-1`) instead of combo mode
-- **ADDED**: Transformation source information in output format (score, domain, transformation_name)
-- **IMPROVED**: Reduced transformation count from 30+ to 15 core transformations
-- **ENHANCED**: Better organization and reduced code duplication
-
-### v0.1.2
-- **NEW**: Added `lookalike` transformation bundle for comprehensive visual similarity attacks
-  - Includes core character-level transformations: 1337speak, misspelling, fat-finger, mixed-encodings
-- **BREAKING**: Changed default behavior from `all` transformations to `lookalike` bundle for more practical defaults
-- **IMPROVED**: Modified all Unicode/script transformations to use position-based substitutions like char-sub
-- **ENHANCED**: True streaming with configurable batch sizes for better performance
-- **ADDED**: Progress bars for concurrent domain status checking
-- **OPTIMIZED**: mixed-encodings now generate more variations
-
-### v0.1.1
-- Added 13 new fuzzing transformations from URLCrazy, dnstwist, URLInsane, and DomainFuzz
-- Organized transformations into logical groups
-- Improved CLI with help groupings
-- Enhanced Unicode support
-- Added comprehensive documentation
-
-### v0.1.0
-- Initial release with basic typosquatting transformations
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
