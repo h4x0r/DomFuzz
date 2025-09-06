@@ -13,7 +13,7 @@ use tokio::{
     net::TcpStream,
     time::timeout,
 };
-use trust_dns_resolver::{
+use hickory_resolver::{
     config::{ResolverConfig, ResolverOpts},
     TokioAsyncResolver,
 };
