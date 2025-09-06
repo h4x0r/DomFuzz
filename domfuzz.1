@@ -1,0 +1,448 @@
+.TH DOMFUZZ 1 "2024" "domfuzz 0.1.1" "Domain Fuzzing Tool"
+.SH NAME
+domfuzz \- generate domain name variations using typosquatting techniques
+.SH SYNOPSIS
+.B domfuzz
+[\fIOPTIONS\fR] \fIDOMAIN\fR
+.SH DESCRIPTION
+.B domfuzz
+is a comprehensive domain name variation generator that uses advanced typosquatting techniques to create potential malicious domain variations. It implements 22 different transformation algorithms organized into logical categories to simulate how attackers might create lookalike domains for phishing, brand impersonation, and other malicious activities.
+
+The tool operates in two modes: one-transformation mode (default) where each algorithm is applied individually, and combo mode where transformations are chained together to create complex variations. Results can include similarity scoring, domain availability checking, and filtering by registration status.
+
+.SH OPTIONS
+.TP
+.B \-t, \-\-transformation \fITRANSFORMATION\fR
+Specify transformations to enable (comma-separated). Use 'all' for all transformations. If not specified, the lookalike bundle is enabled by default.
+.TP
+.B \-n, \-\-max\-variations \fINUMBER\fR
+Limit the maximum number of variations to output.
+.TP
+.B \-s, \-\-check\-status
+Check domain availability status (requires network connectivity).
+.TP
+.B \-r, \-\-only\-registered
+Output only domains that are registered (not available). Implies \-\-check\-status.
+.TP
+.B \-\-dictionary \fIFILE\fR
+Path to dictionary file for combosquatting transformations.
+.TP
+.B \-1, \-\-one\-transformation
+Run transformations in combo mode where multiple transformations are chained together on the same domain to create more complex variations. By default, domfuzz runs in one-transformation mode where each transformation is applied individually.
+.TP
+.B \-v, \-\-verbose
+Enable verbose output showing transformation details and generation process.
+.TP
+.B \-\-similarity
+Calculate and display similarity scores for generated variations.
+.TP
+.B \-\-min\-similarity \fITHRESHOLD\fR
+Filter results to minimum similarity threshold (0.0-1.0).
+.TP
+.B \-h, \-\-help
+Print help information.
+
+.SH TRANSFORMATION ALGORITHMS
+.B domfuzz
+implements 22 different transformation algorithms organized into logical categories:
+
+.SS Character-Level Transformations
+Advanced character-level modifications that create visually similar domains:
+
+.TP
+.B 1337speak
+Leetspeak character substitution with realistic combinations. Uses common internet slang replacements (o→0, l→1, e→3, a→@, s→$) applied individually or in combinations for longer domains. Maximum 40% of characters can be substituted with realistic spacing constraints.
+.br
+Examples: google.com → g00gle.com, goog1e.com, g@@gl3.com
+
+.TP
+.B misspelling
+Consolidated typing error simulation with realistic combinations. Includes character insertion, deletion, transposition, keyboard adjacent-key substitution, and vowel swaps. Uses sophisticated constraints based on domain length to simulate natural typing patterns.
+.br
+Examples: google.com → googlle.com (insertion), gogle.com (deletion), googel.com (transposition), googke.com (keyboard), guogle.com (vowel)
+
+.TP
+.B fat-finger
+Character repetition and adjacent-key insertion errors with realistic combinations. Simulates when users accidentally repeat keystrokes or hit adjacent keys. Applies constraints to prevent unrealistic error patterns.
+.br
+Examples: google.com → gooogle.com (repetition), googke.com (adjacent key), gpogle.com (adjacent insertion)
+
+.TP
+.B mixed-encodings
+Comprehensive Unicode transformations with realistic combinations. Includes homoglyph substitution (Latin vs Cyrillic), IDN homograph attacks, mixed-script combinations, and extended Unicode substitutions. Up to 60% of characters can use Unicode alternatives.
+.br
+Examples: google.com → gооgle.com (Cyrillic о), xn--oogle-qmc.com (Punycode), gοοglе.com (mixed script)
+
+.TP
+.B bitsquatting
+Single bit-flip transformations simulating hardware errors or memory corruption. Each character's ASCII representation has one bit flipped to create subtle variations.
+.br
+Examples: google.com → gmogle.com (bit flip in 'o'), eoogle.com (bit flip in 'g')
+
+.SS Phonetic/Semantic Transformations
+Sound and meaning-based variations:
+
+.TP
+.B homophones
+Sound-alike word substitution using words with similar phonetic pronunciation but different spelling.
+.br
+Examples: google.com → gogle.com, secure.com → sekure.com, site.com → sight.com
+
+.TP
+.B cognitive
+Semantic word confusion using words that are conceptually similar or commonly confused in meaning.
+.br
+Examples: secure.com → safety.com, login.com → signin.com, shop.com → store.com
+
+.TP
+.B singular-plural
+Transformation between singular and plural forms of words within domain names.
+.br
+Examples: book.com → books.com, files.com → file.com, service.com → services.com
+
+.SS Number/Word Substitution
+Numeric and word form variations:
+
+.TP
+.B cardinal-substitution
+Substitution of cardinal numbers with their word equivalents and vice versa (1→one, two→2).
+.br
+Examples: one.com → 1.com, 2checkout.com → twocheckout.com, four20.com → 420.com
+
+.TP
+.B ordinal-substitution
+Substitution of ordinal numbers with their written forms (1st→first, 2nd→second).
+.br
+Examples: 1st.com → first.com, 2ndchance.com → secondchance.com
+
+.SS Structure Manipulation
+Domain structure and format changes:
+
+.TP
+.B word-swaps
+Reordering of word components within domain names to create confusion while maintaining recognizable elements.
+.br
+Examples: mybank.com → bankmy.com, secure-login.com → loginsecure.com
+
+.TP
+.B hyphenation
+Addition and removal of hyphens in domain names, and substitution of other characters with hyphens.
+.br
+Examples: google.com → goo-gle.com, my-bank.com → mybank.com, secure_login.com → secure-login.com
+
+.TP
+.B subdomain-injection
+Injection of subdomain components and manipulation of domain hierarchy.
+.br
+Examples: google.com → www.google.com, mail.google.com, secure.google.com
+
+.TP
+.B dot-insertion
+Strategic insertion of dots within domain names to create subdomain confusion.
+.br
+Examples: google.com → g.oogle.com, goo.gle.com, go.ogle.com
+
+.TP
+.B dot-omission
+Removal of dots from existing subdomains or compound domains.
+.br
+Examples: sub.domain.com → subdomain.com, my.site.com → mysite.com
+
+.TP
+.B dot-hyphen-substitution
+Replacement of dots with hyphens and vice versa in domain structures.
+.br
+Examples: sub.domain.com → sub-domain.com, my-site.com → my.site.com
+
+.SS Domain Extensions
+TLD and domain extension manipulations:
+
+.TP
+.B tld-variations
+Alternative top-level domain variations using common TLD substitutions.
+.br
+Examples: google.com → google.net, google.org, google.co, google.io
+
+.TP
+.B intl-tld
+International and country-code TLD variations.
+.br
+Examples: google.com → google.co.uk, google.de, google.fr, google.ca
+
+.TP
+.B wrong-sld
+Wrong second-level domain substitutions in ccTLD contexts.
+.br
+Examples: site.co.uk → site.com.uk, domain.org.uk → domain.co.uk
+
+.TP
+.B combosquatting
+Addition of dictionary words as prefixes or suffixes to create compound domains.
+.br
+Examples: google.com → securegoogle.com, googlesecure.com, mygoogle.com
+
+.TP
+.B brand-confusion
+Addition of brand-related terms to create confusion with legitimate brands.
+.br
+Examples: google.com → googlebrand.com, officialgoogle.com, google-secure.com
+
+.TP
+.B domain-prefix
+Addition of common prefixes to domain names.
+.br
+Examples: google.com → mygoogle.com, thegoogle.com, secure-google.com
+
+.TP
+.B domain-suffix
+Addition of common suffixes to domain names.
+.br
+Examples: google.com → google-secure.com, google-official.com, google-site.com
+
+.SS Transformation Bundles
+Logical groupings of related transformations:
+
+.TP
+.B lookalike
+Character-level transformations that create visually similar domains. Includes: 1337speak, misspelling, fat-finger, mixed-encodings. This is the default bundle.
+.br
+Examples: google.com → g00gle.com (1337speak), googlle.com (misspelling), gooogle.com (fat-finger), gооgle.com (mixed-encodings)
+
+.TP
+.B system-fault
+Hardware and system error transformations. Includes: bitsquatting.
+.br
+Examples: google.com → gmogle.com (bit-flip error)
+
+.TP
+.B vowel\-swap
+Vowel substitution and swapping (a→e, o→u) to create phonetically similar variations.
+.br
+Examples: google.com → guugle.com, geggle.com, gaagle.com
+
+.TP
+.B cognitive
+Semantic word confusion using words that are conceptually similar or commonly confused in meaning.
+.br
+Examples: secure.com → safety.com, login.com → signin.com, shop.com → store.com
+
+.TP
+.B singular\-plural
+Transformation between singular and plural forms of words within domain names.
+.br
+Examples: book.com → books.com, files.com → file.com, service.com → services.com
+
+.SS Number/Word Substitution
+Numeric and word form variations:
+
+.TP
+.B cardinal\-substitution
+Substitution of cardinal numbers with their word equivalents and vice versa (1→one, two→2).
+.br
+Examples: one.com → 1.com, 2checkout.com → twocheckout.com, four20.com → 420.com
+
+.TP
+.B ordinal\-substitution
+Substitution of ordinal numbers with their written forms (1st→first, 2nd→second).
+.br
+Examples: 1st.com → first.com, 2ndchance.com → secondchance.com
+
+.SS Structure Manipulation
+Domain structure and format changes:
+
+.TP
+.B word\-swap
+Reordering of word components within domain names to create confusion while maintaining recognizable elements.
+.br
+Examples: mybank.com → bankmy.com, secure-login.com → loginsecure.com
+
+.TP
+.B hyphenation
+Addition and removal of hyphens in domain names, and substitution of other characters with hyphens.
+.br
+Examples: google.com → goo-gle.com, my-bank.com → mybank.com, secure_login.com → secure-login.com
+
+.TP
+.B subdomain
+Injection of subdomain components and manipulation of domain hierarchy.
+.br
+Examples: google.com → www.google.com, mail.google.com, secure.google.com
+
+.TP
+.B dot\-insertion
+Strategic insertion of dots within domain names to create subdomain confusion.
+.br
+Examples: google.com → g.oogle.com, goo.gle.com, go.ogle.com
+
+.TP
+.B dot\-omission
+Removal of dots from multi-part domains to create confusion about domain structure.
+.br
+Examples: sub.domain.com → subdomaincom, my.site.co.uk → mysitecouk
+
+.TP
+.B dot\-hyphen\-sub
+Substitution between dots and hyphens in domain names.
+.br
+Examples: sub.domain.com → sub-domain-com, my-site.com → my.site.com
+
+.SS Domain Extensions
+TLD and branding transformations:
+
+.TP
+.B tld\-variations
+Top-Level Domain variations using common TLDs (.com, .net, .org, country codes) and new gTLDs.
+.br
+Examples: google.com → google.net, google.org, google.co, google.app
+
+.TP
+.B intl\-tld
+Internationalized Top-Level Domain variations using non-Latin script TLDs.
+.br
+Examples: google.com → google.网络 (Chinese), google.рф (Russian)
+
+.TP
+.B wrong\-sld
+Wrong Second-Level Domain variations, particularly targeting country-code domains (.co.uk, .com.au).
+.br
+Examples: example.co.uk → example.com.uk, example.org.uk, site.com.au → site.net.au
+
+.TP
+.B combosquatting
+Combination with common business and technology keywords (login, secure, mail, app, etc.).
+.br
+Examples: google.com → google-login.com, secure-google.com, google-app.com, googlemail.com
+
+.TP
+.B brand\-confusion
+Addition of authority-suggesting prefixes and suffixes (secure-, -official, -verified).
+.br
+Examples: google.com → secure-google.com, google-official.com, verified-google.com
+
+.TP
+.B domain\-prefix
+Addition of common prefixes to create official-looking variations.
+.br
+Examples: google.com → mygoogle.com, www-google.com, new-google.com
+
+.TP
+.B domain\-suffix
+Addition of common suffixes to create branded variations.
+.br
+Examples: google.com → google-inc.com, google-corp.com, googlesite.com
+
+.SH MODES OF OPERATION
+
+.SS Combo Mode (Default)
+In combo mode, multiple transformations are applied sequentially to create complex variations. Each generated domain goes through 2-5 random transformations from the enabled set, creating sophisticated combinations that simulate real-world attack scenarios.
+
+.SS One-Transformation Mode (-1)
+In one-transformation mode, each enabled transformation is applied individually to the original domain. This mode is useful for understanding the specific impact of each transformation type and for systematic analysis.
+
+.SH OUTPUT FORMAT
+The output format varies depending on options:
+
+.TP
+.B Basic Output
+Each line contains a domain variation.
+
+.TP
+.B With Similarity Scoring
+Format: \fISIMILARITY_SCORE\fR, \fIDOMAIN\fR
+
+.TP
+.B With Status Checking
+Format: \fISIMILARITY_SCORE\fR, \fIDOMAIN\fR, \fISTATUS\fR
+.br
+Where STATUS is one of: available, registered, parked, error
+
+.SH SIMILARITY SCORING
+When similarity scoring is enabled, domfuzz calculates three types of similarity:
+
+.TP
+.B Visual Similarity
+Measures how visually similar the variation appears to the original domain using character shape and appearance analysis.
+
+.TP
+.B Cognitive Similarity
+Measures how mentally similar the variation is using phonetic analysis and semantic meaning.
+
+.TP
+.B Combined Score
+A weighted combination of visual and cognitive similarity scores, providing an overall assessment of how deceptive the variation might be.
+
+.SH EXAMPLES
+.TP
+Generate all possible variations for example.com:
+.B domfuzz example.com
+
+.TP
+Generate only character substitution and keyboard variations:
+.B domfuzz \-t char\-sub,keyboard example.com
+
+.TP
+Check registration status of variations, showing only registered domains:
+.B domfuzz \-r example.com
+
+.TP
+Generate 50 variations with similarity scoring:
+.B domfuzz \-n 50 \-\-similarity example.com
+
+.TP
+Run individual transformations with verbose output:
+.B domfuzz \-1 \-v \-t misspellings,homoglyphs example.com
+
+.TP
+Find highly similar variations (threshold 0.8 or higher):
+.B domfuzz \-\-min\-similarity 0.8 \-\-similarity example.com
+
+.TP
+Use custom dictionary for combosquatting:
+.B domfuzz \-t combosquatting \-\-dictionary /path/to/keywords.txt example.com
+
+.SH SECURITY CONSIDERATIONS
+.B domfuzz
+is designed for defensive security purposes including:
+.IP \(bu 4
+Brand protection and monitoring
+.IP \(bu 4
+Phishing awareness and training
+.IP \(bu 4
+Domain registration defense
+.IP \(bu 4
+Security research and analysis
+
+The tool should be used responsibly and in accordance with applicable laws and regulations. Users should not use generated domains for malicious purposes such as phishing, fraud, or trademark infringement.
+
+.SH FILES
+.TP
+.I ~/.local/share/domfuzz/dictionary.txt
+Default dictionary file for combosquatting (if exists)
+
+.SH EXIT STATUS
+.B domfuzz
+exits with status 0 on success, and >0 if an error occurs.
+
+.SH BUGS
+Report bugs at: https://github.com/example/domfuzz/issues
+
+.SH AUTHOR
+Written by Albert Hui <albert@securityronin.com> for defensive security research and brand protection purposes.
+
+.SH COPYRIGHT
+Copyright (c) 2025 Albert Hui <albert@securityronin.com>
+.br
+This software is released under the MIT License.
+.br
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+.br
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+.br
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+.br
+For the complete license text, see the LICENSE file distributed with this software.
+
+.SH SEE ALSO
+.BR whois (1),
+.BR dig (1),
+.BR nslookup (1)
