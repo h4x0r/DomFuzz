@@ -831,14 +831,15 @@ async fn main() {
             let mut rng = thread_rng();
 
             // Define available generators
-            type GeneratorFn = Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>;
-            let generators: Vec<(&str, GeneratorFn)> = vec![
-                ("char_sub", Box::new(|d, t| generate_1337speak(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-                ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-                ("misspelling", Box::new(|d, t| generate_misspelling(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-                ("tld_variations", Box::new(|d, t| generate_tld_variations(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-                ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-                ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        
+            #[allow(clippy::type_complexity, clippy::redundant_closure)]
+            let generators: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
+                ("char_sub", Box::new(|d, t| generate_1337speak(d, t))),
+                ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t))),
+                ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
+                ("tld_variations", Box::new(|d, t| generate_tld_variations(d, t))),
+                ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
+                ("hyphenation", Box::new(|d, t| generate_hyphenation(d, t))),
             ];
 
             while additional_variations.len() < target_additional && attempts < max_attempts {
@@ -1560,7 +1561,7 @@ async fn generate_combo_attacks_streaming(
     use rand::thread_rng;
     use rand::Rng;
     
-    type GeneratorFn = Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>;
+
 
     let mut generated_domains = std::collections::HashSet::new();
     let mut rng = thread_rng();
@@ -1568,46 +1569,37 @@ async fn generate_combo_attacks_streaming(
     let mut total_output_count = 0;
 
     // Define all available transformation functions with names matching CLI arguments
-    let all_transformation_functions = vec![
+    #[allow(clippy::type_complexity, clippy::redundant_closure)]
+    let all_transformation_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> = vec![
         ("1337speak", Box::new(|d, t| generate_1337speak(d, t))),
-        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("misspelling", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("keyboard", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("fat-finger", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("word-swap", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("bitsquatting", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("dot-insertion", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("dot-omission", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("misspelling", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("fat-finger", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("cardinal-substitution", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("ordinal-substitution", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("homophones", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("singular-plural", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("cyrillic-comprehensive", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("tld-variations", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("mixed-encodings", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("brand-confusion", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("intl-tld", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("cognitive", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("dot-hyphen-sub", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        (
-            "subdomain",
-            Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>,
-        ),
-        (
-            "combosquatting",
-            Box::new(|d, t| generate_combosquatting(d, t, _dict_words)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>,
-        ),
-        ("wrong-sld", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("domain-prefix", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
-        ("domain-suffix", Box::new(|d, t| generate_$1(d, t)) as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync> as Box<dyn Fn(&str, &str) -> Vec<String> + Send + Sync>),
+        ("mixed-encodings", Box::new(|d, t| generate_mixed_encodings(d, t))),
+        ("misspelling", Box::new(|d, t| generate_misspelling(d, t))),
+        ("keyboard", Box::new(|d, t| generate_misspelling(d, t))),
+        ("fat-finger", Box::new(|d, t| generate_fat_finger(d, t))),
+        ("word-swap", Box::new(|d, t| generate_word_swaps(d, t))),
+        ("bitsquatting", Box::new(|d, t| generate_bitsquatting(d, t))),
+        ("dot-insertion", Box::new(|d, t| generate_dot_insertion(d, t))),
+        ("dot-omission", Box::new(|d, t| generate_dot_omission(d, t))),
+        ("cardinal-substitution", Box::new(|d, t| generate_cardinal_substitution(d, t))),
+        ("ordinal-substitution", Box::new(|d, t| generate_ordinal_substitution(d, t))),
+        ("homophones", Box::new(|d, t| generate_homophones(d, t))),
+        ("singular-plural", Box::new(|d, t| generate_singular_plural(d, t))),
+        ("cyrillic-comprehensive", Box::new(|d, t| generate_mixed_encodings(d, t))),
+        ("tld-variations", Box::new(|d, t| generate_tld_variations(d, t))),
+        ("brand-confusion", Box::new(|d, t| generate_brand_confusion(d, t))),
+        ("intl-tld", Box::new(|d, t| generate_intl_tld(d, t))),
+        ("cognitive", Box::new(|d, t| generate_cognitive(d, t))),
+        ("dot-hyphen-sub", Box::new(|d, t| generate_dot_hyphen_substitution(d, t))),
+        ("subdomain", Box::new(|d, t| generate_subdomain_injection(d, t))),
+        ("combosquatting", Box::new(|d, t| generate_combosquatting(d, t, _dict_words))),
+        ("wrong-sld", Box::new(|d, t| generate_wrong_sld(d, t))),
+        ("domain-prefix", Box::new(|d, t| generate_domain_prefix(d, t))),
+        ("domain-suffix", Box::new(|d, t| generate_domain_suffix(d, t))),
     ];
 
     // Filter transformation functions based on enabled transformations
-    let transformation_functions =
+    #[allow(clippy::type_complexity)]
+    let transformation_functions: Vec<(&str, Box<dyn Fn(&str, &str) -> Vec<String>>)> =
         all_transformation_functions
             .into_iter()
             .filter(|(name, _)| config.enabled_transformations.contains(*name))
