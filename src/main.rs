@@ -116,13 +116,45 @@ struct Cli {
     #[arg(long)]
     similarity: bool,
     
-    /// Filter results to minimum similarity threshold (0.0-1.0)
-    #[arg(long, value_name = "THRESHOLD", default_value = "0.5")]
-    min_similarity: Option<f64>,
+    /// Filter results to minimum similarity threshold (0.0-1.0 or 0%-100%)
+    #[arg(long, value_name = "THRESHOLD", default_value = "50%")]
+    min_similarity: Option<String>,
     
     /// Batch size for streaming domain checking (domains processed per batch)
     #[arg(long, value_name = "SIZE", default_value = "20")]
     batch_size: usize,
+}
+
+/// Parse similarity threshold from string, supporting both decimal (0.0-1.0) and percentage (0%-100%) formats
+fn parse_similarity_threshold(input: &str) -> Result<f64, String> {
+    let input = input.trim();
+    
+    if input.ends_with('%') {
+        // Parse percentage format (e.g., "73.28%")
+        let percentage_str = input.trim_end_matches('%');
+        match percentage_str.parse::<f64>() {
+            Ok(percentage) => {
+                if percentage < 0.0 || percentage > 100.0 {
+                    Err(format!("Percentage must be between 0% and 100%, got: {}%", percentage))
+                } else {
+                    Ok(percentage / 100.0)
+                }
+            }
+            Err(_) => Err(format!("Invalid percentage format: {}", input))
+        }
+    } else {
+        // Parse decimal format (e.g., "0.7328")
+        match input.parse::<f64>() {
+            Ok(decimal) => {
+                if decimal < 0.0 || decimal > 1.0 {
+                    Err(format!("Decimal threshold must be between 0.0 and 1.0, got: {}", decimal))
+                } else {
+                    Ok(decimal)
+                }
+            }
+            Err(_) => Err(format!("Invalid similarity threshold format: {}", input))
+        }
+    }
 }
 
 fn parse_transformations(transformations: &[String]) -> std::collections::HashSet<String> {
@@ -264,7 +296,18 @@ async fn main() {
             }
         }
         let output_limit = cli.max_variations.unwrap_or(usize::MAX);
-        generate_combo_attacks_streaming(&domain_name, &tld, combo_limit, &dict_words, cli.verbose, cli.only_registered, cli.only_available, output_limit, check_status, &enabled_transformations, cli.min_similarity, cli.batch_size).await;
+        let parsed_min_similarity = if let Some(ref sim_str) = cli.min_similarity {
+            match parse_similarity_threshold(sim_str) {
+                Ok(threshold) => Some(threshold),
+                Err(e) => {
+                    eprintln!("Error parsing similarity threshold: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        } else {
+            None
+        };
+        generate_combo_attacks_streaming(&domain_name, &tld, combo_limit, &dict_words, cli.verbose, cli.only_registered, cli.only_available, output_limit, check_status, &enabled_transformations, parsed_min_similarity, cli.batch_size).await;
         // Combo mode now handles its own output and status checking
         return;
     }
@@ -770,7 +813,14 @@ async fn main() {
             let score = calculate_similarity(&original_domain, variation, transformation_type);
             
             // Apply minimum similarity filter if specified
-            if let Some(min_sim) = cli.min_similarity {
+            if let Some(ref sim_str) = cli.min_similarity {
+                let min_sim = match parse_similarity_threshold(sim_str) {
+                    Ok(threshold) => threshold,
+                    Err(e) => {
+                        eprintln!("Error parsing similarity threshold: {}", e);
+                        std::process::exit(1);
+                    }
+                };
                 if score.combined_score >= min_sim {
                     similarity_scores.push(score);
                 }
@@ -821,10 +871,10 @@ async fn main() {
                 // Find similarity score for this domain
                 if let Some(score) = similarity_scores.iter().find(|s| s.domain == domain) {
                     let transformation = variation_sources.get(&domain).map(|s| s.as_str()).unwrap_or("unknown");
-                    println!("{:.3}, {}, {}, {}", score.combined_score, domain, transformation, status);
+                    println!("{:.2}%, {}, {}, {}", score.combined_score * 100.0, domain, transformation, status);
                 } else {
                     let transformation = variation_sources.get(&domain).map(|s| s.as_str()).unwrap_or("unknown");
-                    println!("0.000, {}, {}, {}", domain, transformation, status);
+                    println!("0.00%, {}, {}, {}", domain, transformation, status);
                 }
                 output_counter += 1;
             }
@@ -840,28 +890,28 @@ async fn main() {
                         attack, domain_name, tld, variation, score.visual_score, score.cognitive_score, score.combined_score);
                     // Always show combined similarity score with transformation source
                     if let Some(score) = similarity_scores.iter().find(|s| s.domain == *variation) {
-                        println!("{:.3}, {}, {}", score.combined_score, variation, attack);
+                        println!("{:.2}%, {}, {}", score.combined_score * 100.0, variation, attack);
                     } else {
-                        println!("0.000, {}, {}", variation, attack);
+                        println!("0.00%, {}, {}", variation, attack);
                     }
                 } else {
                     // Always show combined similarity score with transformation source
                     if let Some(score) = similarity_scores.iter().find(|s| s.domain == *variation) {
                         let transformation = variation_sources.get(*variation).map(|s| s.as_str()).unwrap_or("unknown");
-                        println!("{:.3}, {}, {}", score.combined_score, variation, transformation);
+                        println!("{:.2}%, {}, {}", score.combined_score * 100.0, variation, transformation);
                     } else {
                         let transformation = variation_sources.get(*variation).map(|s| s.as_str()).unwrap_or("unknown");
-                        println!("0.000, {}, {}", variation, transformation);
+                        println!("0.00%, {}, {}", variation, transformation);
                     }
                 }
             } else {
                 // Always show combined similarity score with transformation source
                 if let Some(score) = similarity_scores.iter().find(|s| s.domain == *variation) {
                     let transformation = variation_sources.get(*variation).map(|s| s.as_str()).unwrap_or("unknown");
-                    println!("{:.3}, {}, {}", score.combined_score, variation, transformation);
+                    println!("{:.2}%, {}, {}", score.combined_score * 100.0, variation, transformation);
                 } else {
                     let transformation = variation_sources.get(*variation).map(|s| s.as_str()).unwrap_or("unknown");
-                    println!("0.000, {}, {}", variation, transformation);
+                    println!("0.00%, {}, {}", variation, transformation);
                 }
             }
         }
@@ -1501,9 +1551,9 @@ async fn process_batch(
                 if should_show && batch_output_count < remaining_output_slots {
                     // Find similarity score for this domain
                     if let Some((_, score)) = batch_to_process.iter().find(|(d, _)| d == &domain) {
-                        println!("{:.3}, {}, combo, {}", score.combined_score, domain, status);
+                        println!("{:.2}%, {}, combo, {}", score.combined_score * 100.0, domain, status);
                     } else {
-                        println!("0.000, {}, combo, {}", domain, status);
+                        println!("0.00%, {}, combo, {}", domain, status);
                     }
                     batch_output_count += 1;
                 }
@@ -1512,7 +1562,7 @@ async fn process_batch(
     } else {
         // Output without status checking
         for (domain, score) in batch_to_process.iter().take(remaining_output_slots) {
-            println!("{:.3}, {}, combo", score.combined_score, domain);
+            println!("{:.2}%, {}, combo", score.combined_score * 100.0, domain);
             batch_output_count += 1;
         }
     }

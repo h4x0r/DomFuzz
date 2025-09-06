@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
@@ -24,7 +24,7 @@ jobs:
         components: rustfmt, clippy
     
     - name: Cache cargo registry
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
       with:
         path: |
           ~/.cargo/registry
@@ -58,13 +58,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
     
     - name: Cache cargo registry
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
       with:
         path: |
           ~/.cargo/registry
@@ -89,13 +89,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
     
     - name: Cache cargo registry
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
       with:
         path: |
           ~/.cargo/registry
@@ -115,7 +115,7 @@ jobs:
       run: cargo audit --db advisory-db --json | tee audit-report.json
     
     - name: Upload audit report
-      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.6.2
       if: always()
       with:
         name: security-audit-report
@@ -126,13 +126,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain  
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
     
     - name: Cache cargo registry
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
       with:
         path: |
           ~/.cargo/registry
@@ -155,7 +155,7 @@ jobs:
       run: cargo vet --locked || echo "cargo-vet found issues - review required"
     
     - name: Upload vet report
-      uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.6.2
       if: always()
       with:
         name: cargo-vet-report

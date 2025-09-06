@@ -17,7 +17,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Get version from tag
       id: get_version
@@ -62,7 +62,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
@@ -71,7 +71,7 @@ jobs:
         targets: ${{ matrix.target }}
     
     - name: Cache cargo registry
-      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
       with:
         path: |
           ~/.cargo/registry
@@ -106,7 +106,7 @@ jobs:
     
     - name: Upload Release Asset (tar.gz)
       if: matrix.archive == 'tar.gz'
-      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+      uses: actions/upload-release-asset@26e18899d0e8c16a14afbc25ff020c2adebe2a7b # v1.0.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -117,7 +117,7 @@ jobs:
     
     - name: Upload Release Asset (zip)
       if: matrix.archive == 'zip'
-      uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
+      uses: actions/upload-release-asset@26e18899d0e8c16a14afbc25ff020c2adebe2a7b # v1.0.2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17 # stable
