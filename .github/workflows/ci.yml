@@ -104,14 +104,22 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-audit-
     
-    - name: Install cargo-audit
-      run: cargo install --locked cargo-audit
+    - name: Install cargo-audit and cargo-auditable
+      run: |
+        cargo install --locked cargo-audit
+        cargo install --locked cargo-auditable
+    
+    - name: Build with auditable metadata
+      run: cargo auditable build --release
     
     - name: Run cargo audit
       run: cargo audit
     
     - name: Run cargo audit for dependencies
       run: cargo audit --db advisory-db --json | tee audit-report.json
+    
+    - name: Audit built binary
+      run: cargo audit bin target/release/domfuzz
     
     - name: Upload audit report
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -223,3 +231,280 @@ jobs:
       uses: github/codeql-action/analyze@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
       with:
         category: "/language:${{matrix.language}}"
+
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: 0
+    
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@1f2d10fb689bc07a4c12f0ca97ee6b6616362b89 # v2.3.6
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Only needed for commercial use
+    
+    - name: Upload Gitleaks report
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: always()
+      with:
+        name: gitleaks-report
+        path: results.sarif
+
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-license-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-license-
+    
+    - name: Install cargo-license
+      run: cargo install --locked cargo-license
+    
+    - name: Generate license report
+      run: cargo license --json > licenses.json
+    
+    - name: Check for forbidden licenses
+      run: |
+        # Check for copyleft licenses that might be problematic
+        FORBIDDEN=$(jq -r '.[] | select(.license | test("GPL-2.0|GPL-3.0|AGPL|LGPL"; "i")) | .name' licenses.json)
+        if [ -n "$FORBIDDEN" ]; then
+          echo "::warning::Potentially problematic licenses found:"
+          echo "$FORBIDDEN" | while read pkg; do
+            echo "::warning::$pkg"
+          done
+        fi
+        
+        # Check for unknown/missing licenses
+        UNKNOWN=$(jq -r '.[] | select(.license == null or .license == "" or .license == "UNKNOWN") | .name' licenses.json)
+        if [ -n "$UNKNOWN" ]; then
+          echo "::error::Dependencies with unknown licenses found:"
+          echo "$UNKNOWN" | while read pkg; do
+            echo "::error::$pkg has unknown license"
+          done
+          exit 1
+        fi
+    
+    - name: Upload license report
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: always()
+      with:
+        name: license-report
+        path: licenses.json
+
+  sbom-generation:
+    name: SBOM Generation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6 # stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-sbom-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-sbom-
+    
+    - name: Install SBOM generators
+      run: |
+        cargo install --locked cargo-cyclonedx
+        cargo install --locked cargo-sbom
+    
+    - name: Generate CycloneDX SBOM
+      run: |
+        cargo cyclonedx --format json --output-file sbom-cyclonedx.json
+        cargo cyclonedx --format xml --output-file sbom-cyclonedx.xml
+    
+    - name: Generate SPDX SBOM
+      run: cargo sbom --output-format spdx-json --output-file sbom-spdx.json
+    
+    - name: Generate human-readable SBOM
+      run: |
+        echo "# Software Bill of Materials (SBOM)" > SBOM.md
+        echo "Generated on: $(date -u)" >> SBOM.md
+        echo "Project: domfuzz" >> SBOM.md
+        echo "" >> SBOM.md
+        echo "## Dependencies" >> SBOM.md
+        cargo tree --format "{p} - {l}" | sed 's/^/- /' >> SBOM.md
+    
+    - name: Upload SBOM artifacts
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: sbom-reports
+        path: |
+          sbom-cyclonedx.json
+          sbom-cyclonedx.xml
+          sbom-spdx.json
+          SBOM.md
+    
+    - name: Attach SBOM to release
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        # Create combined SBOM archive for releases
+        tar -czf domfuzz-sbom-${{ github.ref_name }}.tar.gz sbom-*.json sbom-*.xml SBOM.md
+    
+    - name: Upload release SBOM
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        name: release-sbom
+        path: domfuzz-sbom-*.tar.gz
+
+  openssf-scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        persist-credentials: false
+    
+    - name: Run OpenSSF Scorecard
+      uses: ossf/scorecard-action@62b2cac7ed8198b15735ed49ab1e5cf35480ba46 # v2.4.0
+      with:
+        results_file: scorecard-results.sarif
+        results_format: sarif
+        repo_token: ${{ secrets.SCORECARD_READ_TOKEN || secrets.GITHUB_TOKEN }}
+        publish_results: true
+    
+    - name: Upload Scorecard results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      with:
+        sarif_file: scorecard-results.sarif
+    
+    - name: Upload Scorecard results as artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: scorecard-results
+        path: scorecard-results.sarif
+
+  commit-verification:
+    name: Commit Verification
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: 0
+    
+    - name: Verify commit signatures
+      run: |
+        echo "Checking commit signatures..."
+        
+        # Check if the latest commit is signed
+        if git log --show-signature -1 --format="%G?" | grep -q "G"; then
+          echo "✅ Latest commit is signed and verified"
+          git log --show-signature -1 --oneline
+        elif git log --show-signature -1 --format="%G?" | grep -q "U"; then
+          echo "⚠️ Latest commit is signed but untrusted"
+          echo "::warning::Commit signature is untrusted - check GPG key"
+          git log --show-signature -1 --oneline
+        elif git log --show-signature -1 --format="%G?" | grep -q "B"; then
+          echo "❌ Latest commit has bad signature"
+          echo "::error::Commit has bad signature"
+          exit 1
+        else
+          echo "⚠️ Latest commit is not signed"
+          echo "::warning::Commit is not signed - consider enabling commit signing"
+          git log -1 --oneline
+        fi
+    
+    - name: Check recent commits signing
+      run: |
+        echo "Checking last 10 commits for signatures..."
+        UNSIGNED=0
+        TOTAL=0
+        
+        git log --format="%H %G? %s" -10 | while read hash status subject; do
+          TOTAL=$((TOTAL + 1))
+          if [ "$status" != "G" ] && [ "$status" != "U" ]; then
+            UNSIGNED=$((UNSIGNED + 1))
+            echo "⚠️ Unsigned: $hash - $subject"
+          else
+            echo "✅ Signed: $hash - $subject"
+          fi
+        done
+        
+        echo "Signature summary for last 10 commits completed"
+    
+    - name: Generate commit verification report
+      run: |
+        echo "# Commit Verification Report" > commit-verification.md
+        echo "Generated: $(date -u)" >> commit-verification.md
+        echo "" >> commit-verification.md
+        echo "## Latest Commit" >> commit-verification.md
+        git log --show-signature -1 >> commit-verification.md
+        echo "" >> commit-verification.md
+        echo "## Last 10 Commits Signature Status" >> commit-verification.md
+        git log --format="- %h %G? %s" -10 >> commit-verification.md
+    
+    - name: Upload commit verification report
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: commit-verification-report
+        path: commit-verification.md
+
+  semgrep-sast:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    
+    - name: Run Semgrep
+      run: |
+        semgrep \
+          --config=auto \
+          --sarif \
+          --output=semgrep-results.sarif \
+          --error \
+          --verbose \
+          --exclude="target/" \
+          --exclude="tests/" \
+          .
+    
+    - name: Upload Semgrep results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      if: always()
+      with:
+        sarif_file: semgrep-results.sarif
+    
+    - name: Upload Semgrep results as artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: always()
+      with:
+        name: semgrep-results
+        path: semgrep-results.sarif

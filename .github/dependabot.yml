@@ -27,3 +27,16 @@ updates:
     commit-message:
       prefix: "ci:"
       include: "scope"
+    # Security: Only allow patch and minor updates for actions
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # Group related GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "actions/*"
+          - "github/*"
+        update-types:
+          - "patch"
+          - "minor"
