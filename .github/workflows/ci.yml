@@ -176,7 +176,7 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Run Trivy vulnerability scanner in repo mode
-      uses: aquasecurity/trivy-action@b6643a2af648bb4a59aa0fec12fd4d8eb79dc85a # v0.33.1
+      uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
       with:
         scan-type: 'fs'
         scan-ref: '.'
@@ -184,7 +184,7 @@ jobs:
         output: 'trivy-results.sarif'
     
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      uses: github/codeql-action/upload-sarif@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
@@ -205,7 +205,7 @@ jobs:
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      uses: github/codeql-action/init@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3
       with:
         languages: ${{ matrix.language }}
         queries: +security-and-quality
@@ -228,7 +228,7 @@ jobs:
       run: cargo build --release
     
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      uses: github/codeql-action/analyze@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3
       with:
         category: "/language:${{matrix.language}}"
 
@@ -242,7 +242,7 @@ jobs:
         fetch-depth: 0
     
     - name: Run Gitleaks
-      uses: gitleaks/gitleaks-action@1f2d10fb689bc07a4c12f0ca97ee6b6616362b89 # v2.3.6
+      uses: gitleaks/gitleaks-action@44c470ffc35caa8b1eb3e8012ca53c2f9bea4eb5 # v2.3.6
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Only needed for commercial use
@@ -398,7 +398,7 @@ jobs:
         publish_results: true
     
     - name: Upload Scorecard results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      uses: github/codeql-action/upload-sarif@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3
       with:
         sarif_file: scorecard-results.sarif
     
@@ -407,6 +407,32 @@ jobs:
       with:
         name: scorecard-results
         path: scorecard-results.sarif
+
+  verify-action-pins:
+    name: Verify Action SHA Pins
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+      with:
+        node-version: '20'
+    
+    - name: Install pin-github-action
+      run: npm install -g pin-github-action
+    
+    - name: Verify all actions are pinned to SHA
+      run: |
+        echo "Checking that all GitHub Actions are pinned to SHA hashes..."
+        if pin-github-action --check .github/workflows/*.yml; then
+          echo "✅ All GitHub Actions are properly pinned to SHA hashes"
+        else
+          echo "❌ Some actions are not pinned to SHA hashes"
+          echo "Run: pin-github-action .github/workflows/*.yml to fix"
+          exit 1
+        fi
 
   commit-verification:
     name: Commit Verification
@@ -508,7 +534,7 @@ jobs:
           .
     
     - name: Upload Semgrep results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@6a28655e3dcb49cb0840ea372fd6d17733edd8a4 # v3
+      uses: github/codeql-action/upload-sarif@f1f6e5f6af878fb37288ce1c627459e94dbf7d01 # v3
       if: always()
       with:
         sarif_file: semgrep-results.sarif

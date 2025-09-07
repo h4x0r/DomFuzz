@@ -14,29 +14,29 @@ updates:
       prefix: "deps:"
       include: "scope"
     
-  # Enable version updates for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"  
-      time: "09:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "4n6h4x0r"
-    commit-message:
-      prefix: "ci:"
-      include: "scope"
-    # Security: Only allow patch and minor updates for actions
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    # Group related GitHub Actions updates
-    groups:
-      github-actions:
-        patterns:
-          - "actions/*"
-          - "github/*"
-        update-types:
-          - "patch"
-          - "minor"
+  # GitHub Actions updates disabled - using pin-github-action for SHA pinning instead
+  # - package-ecosystem: "github-actions"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"  
+  #     time: "09:00"
+  #   open-pull-requests-limit: 5
+  #   reviewers:
+  #     - "4n6h4x0r"
+  #   commit-message:
+  #     prefix: "ci:"
+  #     include: "scope"
+  #   # Security: Only allow patch and minor updates for actions
+  #   ignore:
+  #     - dependency-name: "*"
+  #       update-types: ["version-update:semver-major"]
+  #   # Group related GitHub Actions updates
+  #   groups:
+  #     github-actions:
+  #       patterns:
+  #         - "actions/*"
+  #         - "github/*"
+  #       update-types:
+  #         - "patch"
+  #         - "minor"
