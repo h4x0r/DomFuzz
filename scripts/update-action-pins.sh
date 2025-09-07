@@ -23,11 +23,17 @@ done
 echo "✅ All GitHub Action SHA pins updated!"
 echo ""
 echo "🔍 Verifying pins..."
-if pin-github-action --check .github/workflows/*.yml; then
-    echo "✅ All actions are properly pinned to SHA hashes"
-else
-    echo "❌ Verification failed - some actions may not be properly pinned"
+# Check if any workflow files contain version tags instead of SHA hashes
+if grep -r '@v[0-9]' .github/workflows/ >/dev/null 2>&1 || \
+   grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ >/dev/null 2>&1; then
+    echo "❌ Verification failed - some actions still use version tags:"
+    echo "   Version tags found:"
+    grep -r '@v[0-9]' .github/workflows/ 2>/dev/null || true
+    grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ 2>/dev/null || true
+    echo "   Run the script again to fix remaining issues"
     exit 1
+else
+    echo "✅ All actions are properly pinned to SHA hashes"
 fi
 
 echo ""
