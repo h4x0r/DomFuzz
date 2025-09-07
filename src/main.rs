@@ -96,7 +96,7 @@ struct Cli {
     /// Domain to generate variations for
     domain: String,
 
-    /// Transformations to enable (comma-separated). 
+    /// Transformations to enable (comma-separated).
     /// Default: 'lookalike' bundle (1337speak, misspelling, fat-finger, mixed-encodings).
     /// Use 'all' for all transformations, or specify individual ones.
     /// Available bundles: 'lookalike', 'system-fault'
@@ -2199,15 +2199,33 @@ fn generate_mixed_encodings(domain: &str, tld: &str) -> Vec<String> {
     // Comprehensive encoding map based on IronGeek homoglyph research and Unicode homoglyphs
     let encoding_map: std::collections::HashMap<char, Vec<char>> = [
         // Letters with extensive homoglyph mappings
-        ('a', vec!['а', 'α', 'ａ', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'à', 'á', 'â', 'ã', 'ä', 'å', 'ɑ', 'Α', 'Ꭺ']), 
+        (
+            'a',
+            vec![
+                'а', 'α', 'ａ', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'à', 'á', 'â', 'ã', 'ä', 'å', 'ɑ',
+                'Α', 'Ꭺ',
+            ],
+        ),
         ('b', vec!['ь', 'β', 'ｂ', 'ß', 'ʙ', 'Β', 'В', 'Ь', 'Ᏼ', 'ᛒ']),
         ('c', vec!['с', 'ｃ', 'ϲ', 'Ϲ', 'С', 'Ꮯ', 'Ⅽ', 'ⅽ']),
-        ('d', vec!['д', 'ｄ', 'Ď', 'ď', 'Đ', 'đ', 'ԁ', 'ժ', 'Ꭰ', 'ḍ', 'Ⅾ', 'ⅾ']),
-        ('e', vec!['е', 'ε', 'ｅ', 'È', 'É', 'Ê', 'Ë', 'é', 'ê', 'ë', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė', 'Ę', 'Ě', 'ě', 'Ε', 'Е', 'Ꭼ']),
+        (
+            'd',
+            vec!['д', 'ｄ', 'Ď', 'ď', 'Đ', 'đ', 'ԁ', 'ժ', 'Ꭰ', 'ḍ', 'Ⅾ', 'ⅾ'],
+        ),
+        (
+            'e',
+            vec![
+                'е', 'ε', 'ｅ', 'È', 'É', 'Ê', 'Ë', 'é', 'ê', 'ë', 'Ē', 'ē', 'Ĕ', 'ĕ', 'Ė', 'ė',
+                'Ę', 'Ě', 'ě', 'Ε', 'Е', 'Ꭼ',
+            ],
+        ),
         ('f', vec!['ф', 'ｆ', 'Ϝ']),
         ('g', vec!['ѓ', 'ｇ', 'ɡ', 'ɢ', 'Ԍ', 'ն', 'Ꮐ']),
         ('h', vec!['н', 'η', 'ｈ', 'ʜ', 'Η', 'Н', 'һ', 'Ꮋ']),
-        ('i', vec!['і', 'ι', 'ｉ', 'ɩ', 'Ι', 'І', 'ا', 'Ꭵ', 'ᛁ', 'Ⅰ', 'ⅰ']),
+        (
+            'i',
+            vec!['і', 'ι', 'ｉ', 'ɩ', 'Ι', 'І', 'ا', 'Ꭵ', 'ᛁ', 'Ⅰ', 'ⅰ'],
+        ),
         ('j', vec!['ј', 'ｊ', 'ϳ', 'Ј', 'յ', 'Ꭻ']),
         ('k', vec!['к', 'κ', 'ｋ', 'Κ', 'К', 'Ꮶ', 'ᛕ']),
         ('l', vec!['ӏ', 'ｌ', 'ʟ', 'ا', 'Ꮮ', 'Ⅼ', 'ⅼ']),
@@ -2225,10 +2243,9 @@ fn generate_mixed_encodings(domain: &str, tld: &str) -> Vec<String> {
         ('x', vec!['х', 'χ', 'ｘ', 'Χ', 'Х', 'Ⅹ', 'ⅹ']),
         ('y', vec!['у', 'ｙ', 'ʏ', 'Υ', 'γ', 'Ү']),
         ('z', vec!['ᴢ', 'ｚ', 'Ζ', 'Ꮓ']),
-        
         // Numbers with homoglyphs
         ('0', vec!['О', 'о', 'Ο', 'ο', 'Օ', 'ｏ', '٠']), // Zero with O variations
-        ('1', vec!['ا', 'Ⅰ', 'ⅰ', 'ǀ', '１']), // One with I, l variations  
+        ('1', vec!['ا', 'Ⅰ', 'ⅰ', 'ǀ', '１']),           // One with I, l variations
         ('2', vec!['２']),
         ('3', vec!['３']),
         ('4', vec!['４']),
@@ -2237,10 +2254,10 @@ fn generate_mixed_encodings(domain: &str, tld: &str) -> Vec<String> {
         ('7', vec!['７']),
         ('8', vec!['８', 'Ց']),
         ('9', vec!['９']),
-        
         // Only hyphens and dots are valid special characters in domain names
         ('-', vec!['‐', '－']),
-        ('.', vec!['٠', '۔', '܁', '܂', '…', '‧', '。', '．', '｡']),    ]
+        ('.', vec!['٠', '۔', '܁', '܂', '…', '‧', '。', '．', '｡']),
+    ]
     .iter()
     .cloned()
     .collect();

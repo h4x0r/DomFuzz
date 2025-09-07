@@ -8,7 +8,7 @@ struct Variation {
     score: String,
     domain: String,
     transformation: String,
-    status: Option<String>,
+
 }
 
 fn find_domfuzz_binary() -> PathBuf {
@@ -79,8 +79,7 @@ fn parse_output(stdout: &str) -> Vec<Variation> {
             let score = if parts.len() >= 1 { parts[0].clone() } else { String::new() };
             let domain = if parts.len() >= 2 { parts[1].clone() } else { String::new() };
             let transformation = if parts.len() >= 3 { parts[2].clone() } else { String::new() };
-            let status = if parts.len() >= 4 { Some(parts[3].clone()) } else { None };
-            out.push(Variation { score, domain, transformation, status });
+            out.push(Variation { score, domain, transformation });
         }
     }
     out
@@ -138,9 +137,7 @@ fn assert_no_original(variants: &[Variation], original: &str) -> Result<(), Stri
     } else { Ok(()) }
 }
 
-fn is_vowel(c: char) -> bool {
-    matches!(c.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u')
-}
+
 
 fn levenshtein(a: &str, b: &str) -> usize {
     let a_chars: Vec<char> = a.chars().collect();
