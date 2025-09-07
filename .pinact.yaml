@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/pinact/refs/heads/main/json-schema/pinact.json
+# pinact - Pin GitHub Actions for DomFuzz - https://github.com/suzuki-shunsuke/pinact
+
+files:
+  - pattern: "^\\.github/workflows/.*\\.ya?ml$"
+  - pattern: "^(.*/)?action\\.ya?ml$"
+
+# Configuration for DomFuzz security requirements
+ignore_actions: []
+  # No ignored actions - pin everything for maximum security
+  
+# Verify that version annotations match commit SHAs
+verify_version_annotation: true

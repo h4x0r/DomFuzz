@@ -415,22 +415,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     
-    - name: Setup Node.js
-      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+    - name: Setup Go
+      uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
-        node-version: '20'
+        go-version: '1.23'
     
-    - name: Install pin-github-action
-      run: npm install -g pin-github-action
+    - name: Install pinact
+      run: go install github.com/suzuki-shunsuke/pinact/cmd/pinact@latest
     
     - name: Verify all actions are pinned to SHA
       run: |
         echo "Checking that all GitHub Actions are pinned to SHA hashes..."
-        if pin-github-action --check .github/workflows/*.yml; then
+        if pinact run --check; then
           echo "✅ All GitHub Actions are properly pinned to SHA hashes"
         else
           echo "❌ Some actions are not pinned to SHA hashes"
-          echo "Run: pin-github-action .github/workflows/*.yml to fix"
+          echo "Run: pinact run to fix"
           exit 1
         fi
 

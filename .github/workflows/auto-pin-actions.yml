@@ -33,21 +33,21 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+    - name: Setup Go
+      uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
       with:
-        node-version: '20'
+        go-version: '1.23'
 
-    - name: Install pin-github-action
-      run: npm install -g pin-github-action
+    - name: Install pinact
+      run: go install github.com/suzuki-shunsuke/pinact/cmd/pinact@latest
 
     - name: Check if actions need pinning
       id: check-pinning
       run: |
         echo "Checking if any actions need SHA pinning..."
         
-        # Check current pinning status
-        if pin-github-action --check .github/workflows/*.yml; then
+        # Check current pinning status using pinact
+        if pinact run --check; then
           echo "needs_pinning=false" >> $GITHUB_OUTPUT
           echo "✅ All actions are already pinned to SHA hashes"
         else
@@ -60,13 +60,8 @@ jobs:
       run: |
         echo "📌 Pinning GitHub Actions to SHA hashes..."
         
-        # Pin all workflow files
-        for workflow in .github/workflows/*.yml; do
-          if [ -f "$workflow" ]; then
-            echo "  Processing: $workflow"
-            pin-github-action "$workflow" || echo "Warning: Failed to process $workflow"
-          fi
-        done
+        # Pin all actions using pinact
+        pinact run
         
         echo "✅ SHA pinning completed"
 
@@ -74,7 +69,7 @@ jobs:
       if: steps.check-pinning.outputs.needs_pinning == 'true'
       run: |
         echo "🔍 Verifying SHA pinning results..."
-        if pin-github-action --check .github/workflows/*.yml; then
+        if pinact run --check; then
           echo "✅ All actions are now properly pinned"
         else
           echo "❌ Pinning verification failed"

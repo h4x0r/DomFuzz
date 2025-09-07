@@ -82,24 +82,20 @@ echo
 
 # 6. GitHub Actions SHA Pinning Check
 print_status $YELLOW "📌 Checking GitHub Actions SHA pinning..."
-if command -v pin-github-action &> /dev/null; then
-    # Check if any workflow files contain version tags instead of SHA hashes
-    if grep -r '@v[0-9]' .github/workflows/ >/dev/null 2>&1 || \
-       grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ >/dev/null 2>&1; then
-        print_status $RED "❌ Some GitHub Actions use version tags instead of SHA hashes"
-        echo "   Found version tags in workflow files:"
-        grep -r '@v[0-9]' .github/workflows/ 2>/dev/null || true
-        grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ 2>/dev/null || true
-        echo "   Run: pin-github-action .github/workflows/*.yml"
-        echo "   Or: ./scripts/update-action-pins.sh"
-        FAILED=1
+if command -v pinact &> /dev/null; then
+    if pinact run --check; then
+        print_status $GREEN "✅ All GitHub Actions are properly SHA pinned"
     else
-        print_status $GREEN "✅ All GitHub Actions appear to be SHA pinned"
+        print_status $RED "❌ Some GitHub Actions are not properly pinned"
+        echo "   Run: pinact run"
+        FAILED=1
     fi
 else
-    print_status $YELLOW "⚠️ pin-github-action not found - skipping SHA pinning check"
-    echo "   Install: npm install -g pin-github-action"
+    print_status $YELLOW "⚠️ pinact not found - skipping SHA pinning check"
+    echo "   Install: go install github.com/suzuki-shunsuke/pinact/cmd/pinact@latest"
 fi
+echo
+
 echo
 
 # 7. Commit Signing Check (if gitsign is configured)
@@ -129,7 +125,7 @@ else
     echo "  • Format: cargo fmt --all"  
     echo "  • Lint: cargo clippy --all-targets --all-features --fix"
     echo "  • Security: cargo audit fix"
-    echo "  • Actions: ./scripts/update-action-pins.sh"
+    echo "  • Actions: pinact run"
     echo
     exit 1
 fi
