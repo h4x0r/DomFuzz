@@ -1,0 +1,137 @@
+name: Auto-pin GitHub Actions to SHA
+
+# Automatically pins GitHub Actions to SHA hashes when Dependabot updates them
+# This provides security (SHA pinning) + automation (Dependabot updates)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/*.yml'
+      - '.github/workflows/*.yaml'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+
+  # Run monthly to ensure all actions stay pinned
+  schedule:
+    - cron: '0 10 1 * *'  # 1st of each month at 10:00 UTC
+
+jobs:
+  auto-pin-actions:
+    name: Auto-pin Actions to SHA
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@0a44ba7841725637a19e28fa30b79a866c81b0a6 # v4.0.4
+      with:
+        node-version: '20'
+
+    - name: Install pin-github-action
+      run: npm install -g pin-github-action
+
+    - name: Check if actions need pinning
+      id: check-pinning
+      run: |
+        echo "Checking if any actions need SHA pinning..."
+        
+        # Check current pinning status
+        if pin-github-action --check .github/workflows/*.yml; then
+          echo "needs_pinning=false" >> $GITHUB_OUTPUT
+          echo "✅ All actions are already pinned to SHA hashes"
+        else
+          echo "needs_pinning=true" >> $GITHUB_OUTPUT  
+          echo "📌 Some actions need SHA pinning"
+        fi
+
+    - name: Pin actions to SHA hashes
+      if: steps.check-pinning.outputs.needs_pinning == 'true'
+      run: |
+        echo "📌 Pinning GitHub Actions to SHA hashes..."
+        
+        # Pin all workflow files
+        for workflow in .github/workflows/*.yml; do
+          if [ -f "$workflow" ]; then
+            echo "  Processing: $workflow"
+            pin-github-action "$workflow" || echo "Warning: Failed to process $workflow"
+          fi
+        done
+        
+        echo "✅ SHA pinning completed"
+
+    - name: Verify pinning results
+      if: steps.check-pinning.outputs.needs_pinning == 'true'
+      run: |
+        echo "🔍 Verifying SHA pinning results..."
+        if pin-github-action --check .github/workflows/*.yml; then
+          echo "✅ All actions are now properly pinned"
+        else
+          echo "❌ Pinning verification failed"
+          exit 1
+        fi
+
+    - name: Check for changes
+      if: steps.check-pinning.outputs.needs_pinning == 'true'
+      id: check-changes
+      run: |
+        if git diff --quiet; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "No changes to commit"
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Changes detected, will commit"
+        fi
+
+    - name: Commit SHA pinning updates
+      if: steps.check-pinning.outputs.needs_pinning == 'true' && steps.check-changes.outputs.has_changes == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        git add .github/workflows/
+        git commit -m "ci: auto-pin GitHub Actions to SHA hashes
+
+- Automatically pin actions to SHA for supply chain security
+- Triggered by workflow changes or scheduled maintenance
+- All actions now use tamper-proof SHA references
+
+🤖 Automated by auto-pin-actions workflow"
+        
+        git push
+
+    - name: Create summary
+      if: always()
+      run: |
+        echo "## 📌 Action SHA Pinning Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.check-pinning.outputs.needs_pinning }}" = "true" ]; then
+          if [ "${{ steps.check-changes.outputs.has_changes }}" = "true" ]; then
+            echo "✅ **Actions pinned and committed**" >> $GITHUB_STEP_SUMMARY
+            echo "- GitHub Actions have been automatically pinned to SHA hashes" >> $GITHUB_STEP_SUMMARY
+            echo "- Changes committed to main branch" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ **No changes needed**" >> $GITHUB_STEP_SUMMARY  
+            echo "- Pinning was attempted but no changes were required" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "✅ **Already properly pinned**" >> $GITHUB_STEP_SUMMARY
+          echo "- All GitHub Actions are already pinned to SHA hashes" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Security Benefits" >> $GITHUB_STEP_SUMMARY
+        echo "- 🛡️ **Supply chain protection** - SHA pins prevent tag manipulation attacks" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔒 **Tamper-proof references** - Actions are locked to specific commits" >> $GITHUB_STEP_SUMMARY
+        echo "- 📋 **Audit trail** - Exact action versions are documented" >> $GITHUB_STEP_SUMMARY
