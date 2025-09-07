@@ -417,41 +417,68 @@ jobs:
       with:
         fetch-depth: 0
     
+    - name: Install gitsign for Sigstore verification
+      run: |
+        # Install gitsign for Sigstore signature verification
+        go install github.com/sigstore/gitsign@latest
+        echo "$HOME/go/bin" >> $GITHUB_PATH
+    
     - name: Verify commit signatures
       run: |
-        echo "Checking commit signatures..."
+        echo "Checking commit signatures (GPG and Sigstore)..."
         
-        # Check if the latest commit is signed
-        if git log --show-signature -1 --format="%G?" | grep -q "G"; then
-          echo "✅ Latest commit is signed and verified"
+        # Check if the latest commit is signed with GPG
+        GPG_STATUS=$(git log --show-signature -1 --format="%G?" 2>/dev/null || echo "N")
+        
+        if [ "$GPG_STATUS" = "G" ]; then
+          echo "✅ Latest commit is GPG signed and verified"
           git log --show-signature -1 --oneline
-        elif git log --show-signature -1 --format="%G?" | grep -q "U"; then
-          echo "⚠️ Latest commit is signed but untrusted"
-          echo "::warning::Commit signature is untrusted - check GPG key"
+        elif [ "$GPG_STATUS" = "U" ]; then
+          echo "⚠️ Latest commit is GPG signed but untrusted"
+          echo "::warning::GPG signature is untrusted - check GPG key"
           git log --show-signature -1 --oneline
-        elif git log --show-signature -1 --format="%G?" | grep -q "B"; then
-          echo "❌ Latest commit has bad signature"
-          echo "::error::Commit has bad signature"
+        elif [ "$GPG_STATUS" = "B" ]; then
+          echo "❌ Latest commit has bad GPG signature"
+          echo "::error::Commit has bad GPG signature"
           exit 1
         else
-          echo "⚠️ Latest commit is not signed"
-          echo "::warning::Commit is not signed - consider enabling commit signing"
-          git log -1 --oneline
+          # Check for Sigstore signature
+          if git log --show-signature -1 2>&1 | grep -q "gitsign: Good signature"; then
+            echo "✅ Latest commit is Sigstore signed and verified"
+            git log --show-signature -1 --oneline
+          elif git log --show-signature -1 2>&1 | grep -q "gitsign: "; then
+            echo "⚠️ Latest commit has Sigstore signature but verification failed"
+            echo "::warning::Sigstore signature verification failed"
+            git log --show-signature -1 --oneline
+          else
+            echo "⚠️ Latest commit is not signed (neither GPG nor Sigstore)"
+            echo "::warning::Commit is not signed - consider enabling commit signing"
+            git log -1 --oneline
+          fi
         fi
     
     - name: Check recent commits signing
       run: |
-        echo "Checking last 10 commits for signatures..."
+        echo "Checking last 10 commits for signatures (GPG and Sigstore)..."
         UNSIGNED=0
         TOTAL=0
         
-        git log --format="%H %G? %s" -10 | while read hash status subject; do
+        git log --format="%H %s" -10 | while read hash subject; do
           TOTAL=$((TOTAL + 1))
-          if [ "$status" != "G" ] && [ "$status" != "U" ]; then
-            UNSIGNED=$((UNSIGNED + 1))
-            echo "⚠️ Unsigned: $hash - $subject"
+          
+          # Check GPG signature
+          GPG_STATUS=$(git log --show-signature -1 --format="%G?" $hash 2>/dev/null || echo "N")
+          
+          if [ "$GPG_STATUS" = "G" ] || [ "$GPG_STATUS" = "U" ]; then
+            echo "✅ GPG Signed: $hash - $subject"
           else
-            echo "✅ Signed: $hash - $subject"
+            # Check Sigstore signature
+            if git log --show-signature -1 $hash 2>&1 | grep -q "gitsign: Good signature"; then
+              echo "✅ Sigstore Signed: $hash - $subject"
+            else
+              UNSIGNED=$((UNSIGNED + 1))
+              echo "⚠️ Unsigned: $hash - $subject"
+            fi
           fi
         done
         
@@ -466,7 +493,19 @@ jobs:
         git log --show-signature -1 >> commit-verification.md
         echo "" >> commit-verification.md
         echo "## Last 10 Commits Signature Status" >> commit-verification.md
-        git log --format="- %h %G? %s" -10 >> commit-verification.md
+        
+        git log --format="%h %s" -10 | while read hash subject; do
+          GPG_STATUS=$(git log --show-signature -1 --format="%G?" $hash 2>/dev/null || echo "N")
+          if [ "$GPG_STATUS" = "G" ]; then
+            echo "- $hash ✅ GPG $subject" >> commit-verification.md
+          elif [ "$GPG_STATUS" = "U" ]; then
+            echo "- $hash ⚠️ GPG-Untrusted $subject" >> commit-verification.md
+          elif git log --show-signature -1 $hash 2>&1 | grep -q "gitsign: Good signature"; then
+            echo "- $hash ✅ Sigstore $subject" >> commit-verification.md
+          else
+            echo "- $hash ❌ Unsigned $subject" >> commit-verification.md
+          fi
+        done
     
     - name: Upload commit verification report
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
