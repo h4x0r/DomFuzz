@@ -14,14 +14,13 @@ updates:
       prefix: "deps:"
       include: "scope"
     
-  # GitHub Actions updates (reduced frequency - SHA pinning handled by Pinact)
+  # GitHub Actions updates (daily frequency - SHA pinning handled by Pinact)
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"      # Reduced from weekly to monthly
-      day: "monday"  
+      interval: "daily"        # Maximum update frequency
       time: "09:00"
-    open-pull-requests-limit: 3  # Reduced from 5 to 3
+    open-pull-requests-limit: 5  # Increased for daily updates
     reviewers:
       - "4n6h4x0r"
     commit-message:
