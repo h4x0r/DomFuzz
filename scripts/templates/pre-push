@@ -83,13 +83,18 @@ echo
 # 6. GitHub Actions SHA Pinning Check
 print_status $YELLOW "📌 Checking GitHub Actions SHA pinning..."
 if command -v pin-github-action &> /dev/null; then
-    if pin-github-action --check .github/workflows/*.yml 2>/dev/null; then
-        print_status $GREEN "✅ All GitHub Actions are SHA pinned"
-    else
-        print_status $RED "❌ Some GitHub Actions are not SHA pinned"
+    # Check if any workflow files contain version tags instead of SHA hashes
+    if grep -r '@v[0-9]' .github/workflows/ >/dev/null 2>&1 || \
+       grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ >/dev/null 2>&1; then
+        print_status $RED "❌ Some GitHub Actions use version tags instead of SHA hashes"
+        echo "   Found version tags in workflow files:"
+        grep -r '@v[0-9]' .github/workflows/ 2>/dev/null || true
+        grep -r '@[0-9]\+\.[0-9]\+' .github/workflows/ 2>/dev/null || true
         echo "   Run: pin-github-action .github/workflows/*.yml"
         echo "   Or: ./scripts/update-action-pins.sh"
         FAILED=1
+    else
+        print_status $GREEN "✅ All GitHub Actions appear to be SHA pinned"
     fi
 else
     print_status $YELLOW "⚠️ pin-github-action not found - skipping SHA pinning check"
