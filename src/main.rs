@@ -1878,6 +1878,7 @@ fn generate_1337speak(domain: &str, tld: &str) -> Vec<String> {
     }
 
     let substitutions = [
+        // Classic numeric leet substitutions
         ('o', '0'),
         ('0', 'o'),
         ('l', '1'),
@@ -1898,6 +1899,35 @@ fn generate_1337speak(domain: &str, tld: &str) -> Vec<String> {
         ('7', 't'),
         ('z', '2'),
         ('2', 'z'),
+        // Advanced symbol-based leet substitutions (will be filtered by is_valid_domain)
+        ('a', '@'),
+        ('@', 'a'),
+        ('i', '!'),
+        ('!', 'i'),
+        ('s', '$'),
+        ('$', 's'),
+        ('h', '#'),
+        ('#', 'h'),
+        ('c', '('),
+        ('(', 'c'),
+        ('d', ')'),
+        (')', 'd'),
+        ('p', '%'),
+        ('%', 'p'),
+        ('r', '®'),
+        ('®', 'r'),
+        ('t', '+'),
+        ('+', 't'),
+        ('x', '*'),
+        ('*', 'x'),
+        ('n', '^'),
+        ('^', 'n'),
+        ('l', '|'),
+        ('|', 'l'),
+        ('i', '|'),
+        ('e', '€'),
+        ('€', 'e'),
+        // Letter confusion substitutions
         ('i', 'l'),
         ('l', 'i'),
         ('o', 'q'),
@@ -2785,6 +2815,7 @@ fn generate_word_swaps(domain: &str, tld: &str) -> Vec<String> {
 
 fn generate_bitsquatting(domain: &str, tld: &str) -> Vec<String> {
     let mut variations = Vec::new();
+    let original_full = format!("{}.{}", domain, tld);
 
     let chars: Vec<char> = domain.chars().collect();
 
@@ -2798,7 +2829,12 @@ fn generate_bitsquatting(domain: &str, tld: &str) -> Vec<String> {
                     new_domain.push_str(&chars[..i].iter().collect::<String>());
                     new_domain.push(flipped_char);
                     new_domain.push_str(&chars[i + 1..].iter().collect::<String>());
-                    variations.push(format!("{}.{}", new_domain, tld));
+                    let new_full = format!("{}.{}", new_domain, tld);
+
+                    // Don't add if it's the same as original (case-insensitive)
+                    if new_full.to_lowercase() != original_full.to_lowercase() {
+                        variations.push(new_full);
+                    }
                 }
             }
         }

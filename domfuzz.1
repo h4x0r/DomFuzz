@@ -13,7 +13,7 @@ The tool operates in two modes: one-transformation mode (default) where each alg
 .SH OPTIONS
 .TP
 .B \-t, \-\-transformation \fITRANSFORMATION\fR
-Specify transformations to enable (comma-separated). Use 'all' for all transformations. If not specified, the lookalike bundle is enabled by default.
+Specify transformations to enable (comma-separated). Use 'all' for all transformations. If not specified, the common bundle is enabled by default.
 .TP
 .B \-n, \-\-max\-variations \fINUMBER\fR
 Limit the maximum number of variations to output.
@@ -51,1087 +51,377 @@ Advanced character-level modifications that create visually similar domains. The
 
 .TP
 .B 1337speak
-Leetspeak (also known as "leet" or "1337") is a form of internet slang that replaces letters with visually similar numbers and symbols. This transformation simulates how attackers create typosquatting domains using character substitutions that are immediately recognizable to users but visually deceptive. The algorithm applies common internet culture replacements either individually or in realistic combinations.
+Creates lookalike domains by replacing letters with visually similar numbers and symbols, mimicking internet "leet speak" culture. This is one of the most effective visual deception techniques used in real typosquatting attacks.
+
+\fBHow it works:\fR Systematically replaces common letters with their visual lookalikes - 'o' becomes '0', 'l' becomes '1', 'e' becomes '3', etc. Can apply single or multiple replacements depending on domain length.
+
+\fBReal examples:\fR
+.br
+google.com →
+.br
+  g00gle.com (both o's become 0's)
+.br
+  goog1e.com (l becomes 1)
+.br
+  googl3.com (e becomes 3)
+.br
+  g0og13.com (multiple substitutions)
 .br
 .br
-\fBCharacter mappings:\fR
+paypal.com →
 .br
-• \fBo → 0\fR: The most common substitution, as zero and letter 'o' are nearly identical
+  payp4l.com (a becomes 4)
 .br
-• \fBl → 1\fR: Lowercase 'l' and number '1' often appear identical in many fonts
+  p4ypal.com (a becomes 4)
 .br
-• \fBe → 3\fR: The number '3' resembles a backwards 'E'
-.br
-• \fBa → 4\fR: The number '4' contains the letter 'a' shape
-.br
-• \fBs → 5\fR: The number '5' resembles an 'S'
-.br
-• \fBi → 1\fR: The number '1' resembles lowercase 'i'
-.br
-• \fBt → 7\fR: The number '7' can resemble a 't' in certain fonts
-.br
-• \fBg → 9\fR: The number '9' bears some resemblance to 'g'
+  p4yp4l.com (both a's become 4's)
 .br
 .br
-\fBIntelligent application:\fR
+microsoft.com →
 .br
-• Respects domain length (longer domains allow more substitutions)
+  micr0soft.com (o becomes 0)
 .br
-• Maximum 40% character substitution to maintain readability
+  microso7t.com (f becomes 7, t becomes 7)
 .br
-• Realistic spacing prevents consecutive substitutions in short domains
+  micr050f7.com (multiple substitutions)
+
+\fBWhy it's effective:\fR These substitutions look nearly identical in most fonts, especially at small sizes or when users are browsing quickly. Attack success rates are very high because users often don't notice the differences.
+
+\fBCharacter substitutions:\fR
 .br
-• Prioritizes high-impact substitutions (o→0, l→1) for maximum visual similarity
+\fBClassic numeric leet:\fR
+.br
+• o/O → 0 (most effective - looks identical)
+.br
+• l/L → 1 (perfect match in most fonts)  
+.br
+• i/I → 1 (minimal visual difference)
+.br
+• e/E → 3 (mirror image resemblance)
+.br
+• a/A → 4 (triangular shape similarity)
+.br
+• s/S → 5 (curved shape approximation)
+.br
+• g/G → 9 (rotational similarity)
+.br
+• t/T → 7 (cross-stroke similarity)
+.br
+• b/B → 6 (shape approximation)
+.br
+• z/Z → 2 (angular similarity)
 .br
 .br
-\fBReal-world examples:\fR
+\fBAdvanced symbol leet (filtered out for DNS):\fR
 .br
-google.com → g00gle.com, g0ogle.com, goog1e.com, 9oogle.com
+• a/A → @ (at symbol - classic leet)
 .br
-amazon.com → amaz0n.com, amazon.com → am4z0n.com, amazon.com → 4mazon.com
+• i/I → ! (exclamation mark)
 .br
-paypal.com → paypa1.com, paypal.com → p4ypal.com, paypal.com → payp4l.com  
+• s/S → $ (dollar sign)
 .br
-microsoft.com → micr0soft.com, microsoft.com → micr050ft.com, microsoft.com → m1cr0soft.com
+• h/H → # (hash symbol)
+.br
+• c/C → ( (opening parenthesis)
+.br
+• e/E → € (euro symbol)
+.br
+• Multi-char: w → vv, m → /\/\, u → |_|
+.br
+.br
+\fBDNS filtering:\fR Advanced symbols are generated but filtered out since DNS only allows alphanumeric characters. This provides comprehensive leet generation while maintaining valid domain output.
 
 .TP
 .B misspelling
-Comprehensive typing error simulation that models the most common mistakes users make when entering domain names. This transformation consolidates multiple error types into a single, realistic algorithm that respects natural typing patterns and constraints. It simulates both accidental errors (typos, slips) and cognitive errors (transpositions, substitutions).
+Generates domains based on common typing mistakes people make when entering URLs. Models realistic human errors like typos, character swaps, missing letters, and extra keystrokes that happen during normal typing.
+
+\fBHow it works:\fR Simulates the most common typing errors: accidentally hitting adjacent keys, swapping letter order, adding extra characters, or missing keystrokes entirely. Focuses on errors that actually happen when people type quickly.
+
+\fBReal examples:\fR
+.br
+google.com →
+.br
+  gogle.com (missing second 'o')
+.br
+  goggle.com (extra 'g')
+.br
+  googel.com (swapped 'l' and 'e')
+.br
+  goofle.com (adjacent key: 'g' instead of 'g')
+.br
+  googke.com (adjacent key: 'k' instead of 'l')
 .br
 .br
-\fBError types implemented:\fR
+facebook.com →
 .br
-• \fBCharacter deletion\fR: Accidentally skip a letter while typing
+  facbook.com (missing 'e')
 .br
-• \fBCharacter insertion\fR: Accidentally hit an extra key or double-type
+  facebok.com (missing 'o')
 .br
-• \fBCharacter transposition\fR: Swap two adjacent characters (very common error)
+  facenook.com (extra letters)
 .br
-• \fBCharacter substitution\fR: Hit a wrong key, often adjacent to correct key
+  gacebook.com (adjacent key: 'g' instead of 'f')
 .br
-• \fBVowel swapping\fR: Confuse similar vowel sounds (a/e, o/u, i/e)
-.br
-• \fBKeyboard adjacent errors\fR: Hit keys physically next to the intended key
+  favebook.com (adjacent key: 'v' instead of 'c')
 .br
 .br
-\fBIntelligent error modeling:\fR
+amazon.com →
 .br
-• Frequency-based error placement (more errors in middle of words)
+  amzon.com (missing 'a')
 .br
-• Length-aware constraints (shorter domains get fewer errors)
+  amazom.com (adjacent key: 'm' instead of 'n')
 .br
-• Realistic error combinations (1-3 errors per domain maximum)
+  amaozn.com (swapped 'z' and 'o')
 .br
-• Position weighting (avoids errors at start/end of short domains)
+  qmazon.com (adjacent key: 'q' instead of 'a')
+
+\fBTypes of errors simulated:\fR
 .br
-• QWERTY keyboard layout modeling for adjacent key errors
+• \fBMissing letters:\fR paypal.com → paypl.com
 .br
+• \fBExtra letters:\fR google.com → googgle.com
 .br
-\fBReal-world examples:\fR
+• \fBSwapped letters:\fR amazon.com → amaozn.com
 .br
-google.com → googlle.com (double-l insertion), gogle.com (o deletion)
+• \fBAdjacent keys:\fR (keys next to target on keyboard)
 .br
-amazon.com → amazno.com (transposition), amozon.com (a→o vowel swap)
+  - twitter.com → rwitter.com ('r' next to 't')
 .br
-paypal.com → paypla.com (transposition), oaypal.com (adjacent key p→o)
+  - apple.com → appke.com ('k' next to 'l')
 .br
-facebook.com → facbook.com (e deletion), faceboook.com (o insertion)
+• \fBVowel confusion:\fR Similar-sounding vowels
 .br
-microsoft.com → microsfot.com (transposition), microsift.com (o→i substitution)
+  - secure.com → sacure.com ('a' sounds like 'e')
+
+\fBWhy it's effective:\fR These are genuine mistakes people make every day. Users might not realize they mistyped and assume they reached the correct site, especially if the fake site looks legitimate.
 
 .TP
 .B fat-finger
-Models accidental keypresses that occur when users type too quickly or press keys imprecisely. This transformation simulates the "fat finger" effect where users accidentally hit multiple keys or keys adjacent to their target. The algorithm focuses specifically on key repetition and insertion errors that result from imprecise finger placement or timing.
+Simulates "fat finger" typing errors where users accidentally press wrong keys due to finger placement mistakes, especially on mobile devices or when typing quickly. Models the most common accidental keypresses based on physical keyboard layout.
+
+\fBHow it works:\fR Generates variations by replacing characters with keys that are physically adjacent on a QWERTY keyboard. Also simulates repeated characters from keys being pressed too long or bouncing.
+
+\fBReal examples:\fR
+.br
+google.com →
+.br
+  foogle.com ('f' is next to 'g')
+.br
+  hoogle.com ('h' is next to 'g')  
+.br
+  gpople.com ('p' is next to 'o')
+.br
+  googke.com ('k' is next to 'l')
+.br
+  googld.com ('d' is below 'e')
+.br
+  gooogle.com (extra 'o' from key sticking)
+.br
+  googlle.com (extra 'l' from key bounce)
 .br
 .br
-\fBError mechanisms:\fR
+paypal.com →
 .br
-• \fBCharacter doubling\fR: Hold key too long or press twice accidentally
+  oaypal.com ('o' is next to 'p')
 .br
-• \fBAdjacent key insertion\fR: Press extra key next to intended target
+  psypal.com ('s' is next to 'a')
 .br
-• \fBMultiple adjacent errors\fR: Several finger placement errors in same domain
+  paypsl.com ('s' is next to 'a')  
 .br
-• \fBTyping speed errors\fR: Errors that occur during fast typing
+  paypak.com ('k' is next to 'l')
 .br
+  ppaypal.com (repeated 'p')
 .br
-\fBQWERTY adjacency modeling:\fR
-.br
-• Horizontal adjacency: q↔w↔e↔r↔t↔y, a↔s↔d↔f↔g↔h, z↔x↔c↔v↔b↔n
-.br
-• Vertical adjacency: q↔a↔z, w↔s↔x, e↔d↔c, r↔f↔v, t↔g↔b, etc.
-.br
-• Diagonal adjacency: q↔s, w↔a↔d, e↔s↔f, etc.
-.br
-• Common mistakes: o↔p, l↔;, n↔m, etc.
+  paaypal.com (repeated 'a')
 .br
 .br
-\fBRealistic constraints:\fR
+twitter.com →
 .br
-• Prevents excessive repetition (max 2-3 repeated characters)
+  rwitter.com ('r' is next to 't')
 .br
-• Limits adjacent errors to maintain readability
+  tuitter.com ('u' is next to 'i')
 .br
-• Frequency-based placement (more errors in frequently-hit keys)
+  twitrer.com ('r' is next to 't')
 .br
-• Length-appropriate error density
+  twitterr.com (extra 'r' at end)
+
+\fBTypes of fat-finger errors:\fR
 .br
+• \fBAdjacent keys:\fR Keys physically next to target
 .br
-\fBReal-world examples:\fR
+  - Horizontal: q→w, a→s, z→x
 .br
-google.com → gooogle.com (o repetition), googgle.com (g repetition)
+  - Vertical: q→a, w→s, e→d  
 .br
-amazon.com → amazoon.com (o doubling), amaozn.com (adjacent z→o)
+  - Diagonal: q→s, w→a, e→s
 .br
-paypal.com → paypall.com (l doubling), paypakl.com (adjacent l→k)
+• \fBRepeated characters:\fR Key pressed too long
 .br
-facebook.com → facebookk.com (k doubling), favebook.com (adjacent c→v)
+  - google.com → gooogle.com
 .br
-microsoft.com → microosoft.com (o doubling), microsofft.com (f doubling)
+  - apple.com → appple.com
+.br
+• \fBMultiple keys:\fR Two keys pressed at once
+.br
+  - Often happens with 'gh', 'ty', 'ui' combinations
+
+\fBWhy it's effective:\fR These errors happen naturally, especially on mobile devices where keys are small. Users recognize the mistake but might not notice if they've landed on a malicious lookalike site.
+
+\fBMost vulnerable keys:\fR Keys in the center of the keyboard (g, h, t, y, u, i) have more adjacent neighbors and are more prone to fat-finger errors.
 
 .TP
 .B mixed-encodings
-Advanced Unicode homograph attacks using visually identical characters from different scripts. Enhanced with comprehensive character mappings based on IronGeek's homoglyph generator research, providing extensive coverage of Unicode lookalike characters for sophisticated domain deception attacks.
+Creates deceptive domains using Unicode characters that look identical to regular letters but are actually from different alphabets (like Cyrillic, Greek, or Armenian). These "homograph attacks" can create domains that appear pixel-perfect identical to legitimate sites.
+
+\fBHow it works:\fR Replaces regular Latin letters (a-z) with visually identical characters from other Unicode scripts. The resulting domains look exactly the same but have different underlying character codes, making them technically different domains.
+
+\fBReal examples:\fR
+.br
+google.com →
+.br
+  gооgle.com (Cyrillic 'о' instead of Latin 'o')
+.br
+  googlе.com (Cyrillic 'е' instead of Latin 'e')  
+.br
+  gοοgle.com (Greek 'ο' instead of Latin 'o')
+.br
+  gооglе.com (mixed Cyrillic 'о' and 'е')
 .br
 .br
-\fBEnhanced character coverage:\fR
+paypal.com →
 .br
-• \fB60+ Unicode characters per letter\fR: Extensive mappings from multiple scripts
+  рaypal.com (Cyrillic 'р' looks like Latin 'p')
 .br
-• \fBCyrillic script\fR: а, е, о, р, с, х (look identical to Latin a, e, o, p, c, x)
+  pаypal.com (Cyrillic 'а' looks like Latin 'a')
 .br
-• \fBGreek script\fR: α, β, γ, δ, ε, ζ, η, θ, ι, κ, λ, μ, ν, ο, π, ρ, σ, τ, υ, φ, χ, ψ, ω
+  paуpal.com (Cyrillic 'у' looks like Latin 'y')
 .br
-• \fBFullwidth forms\fR: ａ, ｂ, ｃ, ｄ, ｅ (visually similar but different Unicode points)
-.br
-• \fBLatin Extended\fR: À, Á, Â, Ã, Ä, Å, à, á, â, ã, ä, å (accented variations)
-.br
-• \fBArmenian/Cherokee\fR: Specialized character substitutions
+  рауpal.com (multiple Cyrillic substitutions)
 .br
 .br
-\fBIntelligent substitution patterns:\fR
+apple.com →
 .br
-• \fBSingle substitutions\fR: One character replacement (google → gооgle)
+  аpple.com (Cyrillic 'а' looks like Latin 'a')
 .br
-• \fBDouble substitutions\fR: Two character replacements (amazon → аmаzon) 
+  apрle.com (Cyrillic 'р' looks like Latin 'p')
 .br
-• \fBTriple substitutions\fR: Complex multi-character attacks (for longer domains)
+  аррle.com (multiple Cyrillic 'р's)
+
+\fBMost effective character substitutions:\fR
 .br
-• \fBRealistic distribution\fR: Up to 60% character substitution with intelligent positioning
+• \fBPerfect matches (100% identical):\fR
 .br
+  - a → а (Cyrillic, U+0430)
 .br
-\fBCommon character substitutions:\fR
+  - e → е (Cyrillic, U+0435)  
 .br
-• \fBLatin 'a' (U+0061) → Cyrillic 'а' (U+0430)\fR: Identical appearance
+  - o → о (Cyrillic, U+043E)
 .br
-• \fBLatin 'o' (U+006F) → Cyrillic 'о' (U+043E)\fR: Perfect visual match
+  - p → р (Cyrillic, U+0440)
 .br
-• \fBLatin 'e' (U+0065) → Cyrillic 'е' (U+0435)\fR: Indistinguishable
+  - c → с (Cyrillic, U+0441)
 .br
-• \fBLatin 'p' (U+0070) → Cyrillic 'р' (U+0440)\fR: Identical shape
+  - x → х (Cyrillic, U+0445)
 .br
-• \fBLatin 'o' (U+006F) → Greek 'ο' (U+03BF)\fR: Same visual representation
+• \fBNear-perfect matches (99% similar):\fR
 .br
-• \fBLatin 'c' (U+0063) → Cyrillic 'с' (U+0441)\fR: Perfect lookalike
+  - o → ο (Greek omicron, U+03BF)
 .br
+  - i → ι (Greek iota, U+03B9)
 .br
-\fBTechnical implementation:\fR
+  - y → у (Cyrillic, U+0443)
+
+\fBWhy it's extremely dangerous:\fR
 .br
-• Browser display: Domains appear identical to users
+• \fBInvisible to users:\fR Domains look completely identical
 .br
-• Punycode encoding: xn--prefix reveals non-ASCII characters
+• \fBBypass filters:\fR Many security tools don't catch these
 .br
-• DNS resolution: Works normally, pointing to attacker infrastructure
+• \fBValid domains:\fR Browsers accept them as legitimate URLs
 .br
-• Certificate validation: Browsers may show warnings for mixed scripts
-.br
-• Detection difficulty: Extremely hard for users to detect visually
-.br
-.br
-\fBReal-world examples:\fR
-.br
-google.com → gооgle.com (Cyrillic о characters, Punycode: xn--ggle-55da0q)
-.br
-paypal.com → pаypal.com (Cyrillic а, Punycode: xn--pypal-4ve)
-.br
-amazon.com → аmazon.com (Cyrillic а, Punycode: xn--mazon-3ve)
-.br
-apple.com → аpple.com (Cyrillic а, Punycode: xn--pple-43d)
-.br
-microsoft.com → microsοft.com (Greek ο, Punycode: xn--microsooft-99b)
+• \fBSSL certificates:\fR Can get valid certificates for fake domains
+
+\fBDetection difficulty:\fR These attacks are nearly impossible to detect visually. Users need special tools to see the Unicode differences, making them extremely effective for phishing attacks.
 
 .TP
 .B bitsquatting
-Advanced transformation that simulates single bit-flip errors in ASCII characters, modeling hardware failures, memory corruption, cosmic ray strikes, or transmission errors. This technique creates subtle domain variations that could occur naturally due to system faults, making them particularly insidious as they appear to be accidental rather than intentional attacks.
-.br
-.br
-\fBBit-flip mechanism:\fR
-.br
-• Each ASCII character is represented as 8 bits (binary)
-.br
-• A single bit is flipped from 0 to 1 or 1 to 0
-.br
-• Results in a different but often visually similar character
-.br
-• Simulates real-world hardware error scenarios
-.br
-.br
-\fBCommon bit-flip examples:\fR
-.br
-• \fB'o' (0x6F) → 'g' (0x67)\fR: Bit 3 flipped → google.com → ggogle.com
-.br
-• \fB'e' (0x65) → 'a' (0x61)\fR: Bit 2 flipped → secure.com → sacure.com
-.br
-• \fB'l' (0x6C) → 'h' (0x68)\fR: Bit 2 flipped → paypal.com → paypah.com
-.br
-• \fB'n' (0x6E) → 'f' (0x66)\fR: Bit 3 flipped → amazon.com → amazof.com
-.br
-• \fB'r' (0x72) → 's' (0x73)\fR: Bit 0 flipped → microsoft.com → microsoct.com
-.br
-.br
-\fBAttack scenarios:\fR
-.br
-• Memory corruption during DNS resolution
-.br
-• Cosmic ray strikes on network equipment (rare but documented)
-.br
-• Hardware failures in routers or DNS servers
-.br
-• Electromagnetic interference affecting data transmission
-.br
-• Malicious manipulation disguised as system errors
-.br
-.br
-\fBReal-world examples:\fR
-.br
-google.com → gmogle.com, foogle.com, woogle.com (various g bit-flips)
-.br
-amazon.com → amazoo.com, amajon.com, emaron.com (various bit-flips)
-.br
-paypal.com → qaypal.com, peypal.com, payqal.com (various bit-flips)
+Generates domain variations caused by single bit-flip errors in computer memory, network transmission, or storage systems. Models hardware failures that can redirect users to different domains when digital systems malfunction.
 
-.SS Phonetic/Semantic Transformations
-Sound and meaning-based variations:
+\fBHow it works:\fR Takes each character in a domain and systematically flips individual bits in its binary representation, creating variations that result from hardware errors like cosmic ray strikes, memory corruption, or transmission errors.
 
-.TP
-.B homophones
-Advanced phonetic transformation that replaces words with sound-alike alternatives that have different spellings but similar or identical pronunciations. This technique exploits the natural tendency of users to type words phonetically, especially when uncertain of spelling, and can be particularly effective against users whose native language differs from the domain language.
+\fBReal examples:\fR
+.br
+google.com →
+.br
+  foogle.com ('g' bit-flip: 01100111 → 01100110 = 'f')
+.br
+  coogle.com ('g' bit-flip: 01100111 → 01100011 = 'c')
+.br
+  gkogle.com ('o' bit-flip: 01101111 → 01101011 = 'k')
+.br
+  googme.com ('l' bit-flip: 01101100 → 01101101 = 'm')
+.br
+  googlu.com ('e' bit-flip: 01100101 → 01110101 = 'u')
 .br
 .br
-BPhonetic substitution categories:R
+paypal.com →
 .br
-• \fBHomophone pairs\fR: Direct sound-alike replacements (to/two, see/sea, right/write)
+  qaypal.com ('p' bit-flip: 01110000 → 01110001 = 'q')
 .br
-• \fBPhonetic spelling\fR: Alternative spellings based on pronunciation (phone → fone, enough → enuf)
+  pcypal.com ('a' bit-flip: 01100001 → 01100011 = 'c')
 .br
-• \fBSilent letters\fR: Omission of silent letters (know → no, write → rite)
+  payqal.com ('p' bit-flip: 01110000 → 01110001 = 'q')
 .br
-• \fBVowel sounds\fR: Similar vowel sound substitutions (a → e in certain contexts)
-.br
-• \fBConsonant clusters\fR: Simplified consonant groups (night → nite, light → lite)
+  paypam.com ('l' bit-flip: 01101100 → 01101101 = 'm')
 .br
 .br
-BCommon homophone examples:R
+amazon.com →
 .br
-• \fBto/two/too\fR: Numbers and prepositions → 2checkout.com, toocheckout.com
+  cmazon.com ('a' bit-flip: 01100001 → 01100011 = 'c')
 .br
-• \fBsee/sea/c\fR: Viewing and ocean → seesecurity.com, csecurity.com
+  ✗ amAzon.com ('a' bit-flip to 'A' - discarded, case-insensitive)
 .br
-• \fBright/write/rite\fR: Direction and authoring → writebank.com, ritebank.com
+  amazoo.com ('n' bit-flip: 01101110 → 01101111 = 'o')
 .br
-• \fBwon/one/1\fR: Victory and numbers → wonbank.com, 1bank.com
-.br
-• \fBno/know\fR: Negation and knowledge → nomorepay.com, knowmorpay.com
-.br
-• \fBfor/four/4\fR: Preposition and number → 4google.com, fourgle.com
-.br
-.br
-BAttack effectiveness:R
-.br
-• Exploits natural phonetic typing tendencies
-.br
-• Particularly effective against non-native speakers
-.br
-• Works well with voice-to-text input systems
-.br
-• Creates plausible alternative spellings
-.br
-• Often bypasses spell-checkers in browsers
-.br
-.br
-BReal-world examples:R
-.br
-paypal.com → paypall.com, paypal.com → paepal.com (phonetic 'ay' → 'ae')
-.br
-google.com → googel.com, guggle.com (phonetic variations)
-.br
-security.com → sekurity.com, securety.com (phonetic 'c' → 'k', 'i' → 'e')
-.br
-amazon.com → amazonn.com (phonetic double consonant)
+  amarons.com ('z' bit-flip: 01111010 → 01110010 = 'r')
 
-.TP
-.B cognitive
-Advanced semantic transformation that exploits cognitive biases and word association patterns by substituting words with conceptually related or commonly confused terms. This technique leverages users' mental models and expectations, creating domains that feel "close enough" to be legitimate while being distinctly different. Particularly effective in business and technical contexts where industry jargon creates semantic overlap.
+\fBWhen bit-flips happen:\fR
 .br
+• \fBMemory errors:\fR RAM corruption from cosmic rays or electrical interference
 .br
-BSemantic substitution categories:R
+• \fBNetwork transmission:\fR Data corruption during internet transmission  
 .br
-• \fBSynonym replacement\fR: Words with similar meaning (secure → safe, buy → purchase)
+• \fBStorage failures:\fR Hard drive or SSD bit corruption over time
 .br
-• \fBIndustry terminology\fR: Related business terms (login → signin, account → profile)
-.br
-• \fBAction verbs\fR: Similar actions (download → install, search → find)
-.br
-• \fBConcept confusion\fR: Related concepts (mail → email, web → net)
-.br
-• \fBBrand terminology\fR: Alternative brand language (shop → store, pay → checkout)
-.br
-.br
-BCommon cognitive substitutions:R
-.br
-• \fBsecure ↔ safe\fR: Security concept overlap → securebank.com → safebank.com
-.br
-• \fBlogin ↔ signin\fR: Authentication terminology → userlogin.com → usersignin.com
-.br
-• \fBshop ↔ store\fR: Commerce terminology → onlineshop.com → onlinestore.com
-.br
-• \fBmail ↔ email\fR: Communication concepts → webmail.com → webemail.com
-.br
-• \fBaccount ↔ profile\fR: User identity → myaccount.com → myprofile.com
-.br
-• \fBsearch ↔ find\fR: Discovery actions → quicksearch.com → quickfind.com
-.br
-• \fBdownload ↔ install\fR: Software actions → appdownload.com → appinstall.com
-.br
-.br
-BPsychological exploitation:R
-.br
-• Exploits semantic memory networks in the brain
-.br
-• Leverages industry-specific terminology familiarity
-.br
-• Creates "close enough" feeling for legitimacy
-.br
-• Works on users' expectation patterns
-.br
-• Particularly effective in professional contexts
-.br
-.br
-BBusiness context attacks:R
-.br
-• Financial: banking → finance, money → funds, pay → transfer
-.br
-• Technology: software → apps, system → platform, data → info
-.br
-• E-commerce: cart → basket, checkout → payment, order → purchase
-.br
-• Social media: profile → account, friend → contact, share → post
-.br
-.br
-BReal-world examples:R
-.br
-paypal.com → payfriend.com, transferpal.com (payment concept overlap)
-.br
-amazon.com → amazone-store.com, amazonshop.com (shopping terminology)
-.br
-microsoft.com → microsoftware.com (technology terminology)
-.br
-linkedin.com → linkednetwork.com, worklinked.com (professional networking)
+• \fBProcessor errors:\fR CPU cache corruption during high-stress operation
 
-.TP
-.B singular-plural
-Grammatical transformation that converts between singular and plural forms of nouns within domain names, exploiting users' uncertainty about correct domain naming conventions. This technique is particularly effective because many legitimate websites use both singular and plural forms inconsistently, creating genuine confusion about which form a legitimate site might use.
+\fBDomain Name Case Sensitivity:\fR
 .br
-.br
-BGrammatical transformation patterns:R
-.br
-• BRegular pluralsR: Adding or removing -s suffix (file → files, book → books)
-.br
-• \fBIrregular plurals\fR: Complex plural forms (child → children, person → people)
-.br
-• \fBUnchanged plurals\fR: Same form for both (sheep, fish, software)
-.br
-• \fBLatin plurals\fR: Academic/technical terms (datum → data, forum → forums/fora)
-.br
-• \fBCompound words\fR: Multi-word combinations (webpage → webpages, software → softwares)
-.br
-.br
-BCommon transformation examples:R
-.br
-• \fBfile ↔ files\fR: Document management → myfile.com ↔ myfiles.com
-.br
-• \fBservice ↔ services\fR: Business offerings → webservice.com ↔ webservices.com
-.br
-• \fBproduct ↔ products\fR: E-commerce → bestproduct.com ↔ bestproducts.com
-.br
-• \fBsolution ↔ solutions\fR: Business terminology → itsolution.com ↔ itsolutions.com
-.br
-• \fBtool ↔ tools\fR: Software/utilities → webtool.com ↔ webtools.com
-.br
-• \fBnews\fR: Always plural → technews.com (no singular form exists)
-.br
-.br
-BAttack psychology:R
-.br
-• Exploits grammatical uncertainty in domain naming
-.br
-• Many legitimate sites exist in both forms
-.br
-• Users often cannot remember exact grammatical form
-.br
-• Creates plausible alternative that feels correct
-.br
-• Particularly effective with technical terminology
-.br
-.br
-BBusiness sector variations:R
-.br
-• Technology: app → apps, system → systems, platform → platforms
-.br
-• Finance: account → accounts, investment → investments
-.br
-• E-commerce: product → products, item → items, deal → deals
-.br
-• Education: course → courses, lesson → lessons, tutorial → tutorials
-.br
-• Media: video → videos, photo → photos, article → articles
-.br
-.br
-BReal-world examples:R
-.br
-amazon.com → amazone-products.com (adding plural concept)
-.br
-microsoft.com → microsoftservices.com (service → services)
-.br
-google.com → googletool.com vs googletools.com (tool ambiguity)
-.br
-paypal.com → paypalaccounts.com (account → accounts)
+Domain names are case-insensitive (google.com = Google.com = GOOGLE.com), so bit-flips that only change letter case produce identical domains and are discarded.
 
-.SS Number/Word Substitution
-Numeric and word form variations:
+\fBHow each character can change:\fR
+.br
+Every letter has exactly 8 possible bit-flips (one for each bit position):
+.br
+• 'a' (01100001) can become: c, e, i, q, ✗A (case change - discarded)
+.br
+• 'e' (01100101) can become: d, g, a, m, u, ✗E (case change - discarded)  
+.br
+• 'o' (01101111) can become: n, m, k, g, ✗O (case change - discarded)
+.br
+• 'g' (01100111) can become: f, e, c, o, w, ✗G (case change - discarded)
 
-.TP
-.B cardinal-substitution
-Numerical transformation that converts between cardinal numbers and their written word equivalents in both directions, exploiting variations in how numbers are represented in domain names. This technique is particularly effective because legitimate websites often use inconsistent number representation, and users frequently are uncertain whether a site uses digits or written numbers.
+\fBWhy it matters:\fR
 .br
+• \fBReal hardware phenomenon:\fR These errors actually occur in computer systems
 .br
-BCardinal number conversion patterns:R
+• \fBDifficult to detect:\fR Users might not notice single character changes
 .br
-• \fBDigits to words\fR: 1 → one, 2 → two, 3 → three, etc.
+• \fBSystematic coverage:\fR Generates all possible single-bit variations
 .br
-• \fBWords to digits\fR: one → 1, two → 2, three → 3, etc.
-.br
-• \fBMixed representations\fR: Partial conversions within compound terms
-.br
-• \fBZero variations\fR: 0 → zero, oh, null, nil
-.br
-• \fBTeen numbers\fR: 11 → eleven, 12 → twelve, 13 → thirteen, etc.
-.br
-• \fBLarge numbers\fR: 100 → hundred, 1000 → thousand
-.br
-.br
-BCommon transformation examples:R
-.br
-• \fB1 ↔ one\fR: First or unity → 1stbank.com ↔ firstbank.com
-.br
-• \fB2 ↔ two\fR: Second or pair → 2checkout.com ↔ twocheckout.com  
-.br
-• \fB4 ↔ four\fR: Quantity or 'for' homophone → 4you.com ↔ fouryou.com
-.br
-• \fB8 ↔ eight\fR: Infinity symbol resemblance → figure8.com ↔ figureeight.com
-.br
-• \fB10 ↔ ten\fR: Decimal base → top10.com ↔ topten.com
-.br
-• \fB0 ↔ zero\fR: Null representation → point0.com ↔ pointzero.com
-.br
-.br
-BSpecial number contexts:R
-.br
-• \fBVersioning\fR: v1.com → vone.com, version2.com → versiontwo.com
-.br
-• BRankingR: number1.com → numberone.com, top5.com → topfive.com
-.br
-• \fBQuantity\fR: buy2.com → buytwo.com, get3.com → getthree.com
-.br
-• \fBDates/Years\fR: 2024.com → twentytwentyfour.com
-.br
-• \fBTechnology\fR: web2.com → webtwo.com, ai4.com → aifour.com
-.br
-.br
-BAttack effectiveness:R
-.br
-• Exploits inconsistent numbering conventions online
-.br
-• Creates plausible alternatives users might expect
-.br
-• Works with voice recognition systems (digits vs words)
-.br
-• Particularly effective with business/brand names
-.br
-• Leverages homophone confusion (2/to/too, 4/for, 8/ate)
-.br
-.br
-BReal-world examples:R
-.br
-1password.com → onepassword.com (digit to word)
-.br
-twilio.com → 2lio.com (word to digit, partial)
-.br
-4chan.org → fourchan.org (digit to word)
-.br
-nine.com → 9.com (word to digit)
+• \fBHigh-altitude risk:\fR More common in aircraft, spacecraft, or high-elevation systems
 
-.TP
-.B ordinal-substitution
-Specialized numerical transformation that converts between ordinal numbers and their written equivalents, focusing on position, sequence, and ranking terminology. This technique exploits the multiple ways ordinal concepts can be represented in domain names, particularly effective with business names that emphasize priority, sequence, or ranking.
-.br
-.br
-BOrdinal conversion patterns:R
-.br
-• \fBNumeric ordinals\fR: 1st → first, 2nd → second, 3rd → third
-.br
-• \fBSuffix variations\fR: -st, -nd, -rd, -th endings
-.br
-• \fBWritten ordinals\fR: first → 1st, second → 2nd, third → 3rd
-.br
-• \fBHybrid forms\fR: Mixed digit-word combinations
-.br
-• BRanking terminologyR: Position-based language variations
-.br
-.br
-BCommon ordinal transformations:R
-.br
-• \fB1st ↔ first\fR: Primary position → 1stchoice.com ↔ firstchoice.com
-.br
-• \fB2nd ↔ second\fR: Secondary position → 2ndchance.com ↔ secondchance.com
-.br
-• \fB3rd ↔ third\fR: Tertiary position → 3rdparty.com ↔ thirdparty.com
-.br
-• \fB4th ↔ fourth\fR: Quaternary position → 4thstreet.com ↔ fourthstreet.com
-.br
-• \fB5th ↔ fifth\fR: Quinary position → 5thavenue.com ↔ fifthavenue.com
-.br
-• \fBlast ↔ final\fR: Terminal position → lastcall.com ↔ finalcall.com
-.br
-.br
-BBusiness context applications:R
-.br
-• \fBPriority services\fR: 1stpriority.com → firstpriority.com
-.br
-• \fBSequential offerings\fR: 2ndround.com → secondround.com  
-.br
-• BRanking systemsR: 3rdplace.com → thirdplace.com
-.br
-• \fBVersioning\fR: 2ndversion.com → secondversion.com
-.br
-• \fBTime sequences\fR: 1stquarter.com → firstquarter.com
-.br
-.br
-BSpecialized ordinal contexts:R
-.br
-• \fBStreet addresses\fR: 5thstreet.com → fifthstreet.com
-.br
-• \fBEvent naming\fR: 10thannual.com → tenthannual.com
-.br
-• \fBGeneration terms\fR: 3rdgen.com → thirdgen.com
-.br
-• \fBLevel/tier systems\fR: 1stlevel.com → firstlevel.com
-.br
-• \fBSequential brands\fR: 2ndnature.com → secondnature.com
-.br
-.br
-BAttack psychology:R
-.br
-• Exploits uncertainty about ordinal representation conventions
-.br
-• Many businesses use both numeric and written ordinals
-.br
-• Creates legitimacy through familiar ranking terminology
-.br
-• Works with voice-to-text systems (spoken ordinals)
-.br
-• Particularly effective with established sequence-based brands
-.br
-.br
-BReal-world examples:R
-.br
-21stcentury.com → twentyfirstcentury.com (ordinal expansion)
-.br
-3rdpartysoftware.com → thirdpartysoftware.com (standard conversion)
-.br
-1stchoicebank.com → firstchoicebank.com (priority emphasis)
-.br
-2ndopinion.com → secondopinion.com (sequential service)
-
-.SS Structure Manipulation
-Domain structure and format changes:
-
-.TP
-.B word-swaps
-Structural transformation that reorders word components within compound domain names, maintaining all original elements but changing their sequence to create confusion while preserving recognizable brand elements. This technique exploits users' tendency to focus on familiar words rather than their exact order, particularly effective with multi-word domain names and compound business terms.
-.br
-.br
-BWord reordering patterns:R
-.br
-• \fBTwo-word reversal\fR: word1-word2 → word2-word1
-.br
-• \fBMulti-word rotation\fR: Cyclical reordering of three or more words
-.br
-• \fBPriority inversion\fR: Moving secondary words to primary position
-.br
-• \fBAction-object swaps\fR: Verb-noun reordering (download-music → music-download)
-.br
-• \fBAdjective-noun swaps\fR: Descriptor-subject reordering (secure-banking → banking-secure)
-.br
-.br
-BCommon word swap examples:R
-.br
-• \fBmybank ↔ bankmy\fR: Possessive-institution → mybank.com ↔ bankmy.com
-.br
-• \fBsecure-login ↔ login-secure\fR: Security-action → securelogin.com ↔ loginsecure.com
-.br
-• \fBweb-design ↔ design-web\fR: Platform-service → webdesign.com ↔ designweb.com
-.br
-• \fBquick-pay ↔ pay-quick\fR: Speed-action → quickpay.com ↔ payquick.com
-.br
-• \fBsmart-home ↔ home-smart\fR: Technology-location → smarthome.com ↔ homesmart.com
-.br
-.br
-BBusiness context applications:R
-.br
-• \fBFinancial services\fR: onlinebanking.com → bankingonline.com
-.br
-• \fBE-commerce\fR: fastdelivery.com → deliveryfast.com
-.br
-• \fBTechnology\fR: cloudstorage.com → storagecloud.com
-.br
-• \fBHealthcare\fR: medicalcare.com → caremedical.com
-.br
-• \fBEducation\fR: onlinelearning.com → learningonline.com
-.br
-.br
-BMulti-word complex swaps:R
-.br
-• \fBThree-word rotation\fR: secure-online-banking → banking-secure-online → online-banking-secure
-.br
-• \fBPartial reordering\fR: my-secure-account → secure-my-account → account-secure-my
-.br
-• \fBAction-adjective-noun\fR: buy-cheap-books → cheap-buy-books → books-cheap-buy
-.br
-.br
-BPsychological exploitation:R
-.br
-• Users focus on familiar words, not exact order
-.br
-• Maintains brand recognition through word presence
-.br
-• Creates plausible alternative arrangements
-.br
-• Works with users' mental autocorrection
-.br
-• Particularly effective when original order isn't intuitive
-.br
-.br
-BReal-world examples:R
-.br
-paypalcredit.com → creditpaypal.com (service-brand swap)
-.br
-microsoftoffice.com → officemicrosoft.com (product-company swap)
-.br
-googleanalytics.com → analyticsgoogle.com (service-company swap)
-.br
-amazonprime.com → primeamazon.com (service-platform swap)
-
-.TP
-.B hyphenation
-Structural transformation that manipulates hyphen usage in domain names through insertion, removal, and character substitution, exploiting variations in hyphenation conventions and users' uncertainty about correct punctuation in domain names. This technique is particularly effective because legitimate websites often exist with and without hyphens, creating genuine confusion about the correct format.
-.br
-.br
-BHyphenation manipulation patterns:R
-.br
-• \fBHyphen insertion\fR: Adding hyphens within words (google → goo-gle)
-.br
-• \fBHyphen removal\fR: Removing existing hyphens (my-bank → mybank)
-.br
-• \fBCharacter substitution\fR: Replacing other punctuation with hyphens (_ → -, . → -)
-.br
-• \fBWord boundary insertion\fR: Adding hyphens at logical word breaks
-.br
-• \fBSyllable separation\fR: Hyphenating at syllable boundaries
-.br
-.br
-BCommon hyphenation transformations:R
-.br
-• \fBgoogle → goo-gle\fR: Internal word hyphenation
-.br
-• \fBmy-bank → mybank\fR: Compound word consolidation
-.br
-• \fBsecure_login → secure-login\fR: Underscore to hyphen substitution
-.br
-• \fBfacebook → face-book\fR: Compound word separation
-.br
-• \fBpaypal → pay-pal\fR: Brand name segmentation
-.br
-• \fBe.mail → e-mail\fR: Dot to hyphen substitution
-.br
-.br
-BBusiness naming variations:R
-.br
-• \fBCompound brands\fR: microsoft → micro-soft, amazon → ama-zon
-.br
-• \fBDescriptive terms\fR: onlinestore → online-store, webdesign → web-design
-.br
-• \fBService combinations\fR: quickpay → quick-pay, fastmail → fast-mail
-.br
-• \fBTechnology terms\fR: software → soft-ware, database → data-base
-.br
-.br
-BCharacter substitution patterns:R
-.br
-• \fBUnderscore replacement\fR: secure_banking.com → secure-banking.com
-.br
-• \fBDot replacement\fR: web.mail.com → web-mail.com
-.br
-• \fBSpace simulation\fR: my bank → my-bank (conceptual space representation)
-.br
-• \fBCamelCase conversion\fR: myBank → my-bank (breaking camelCase)
-.br
-.br
-BAttack psychology:R
-.br
-• Exploits uncertainty about domain hyphenation rules
-.br
-• Many legitimate variations exist (email/e-mail, website/web-site)
-.br
-• Creates visually similar but distinct domains
-.br
-• Works with users' mental autocorrection
-.br
-• Particularly effective with compound business names
-.br
-.br
-BSEO and branding implications:R
-.br
-• Hyphenated domains often rank differently in search engines
-.br
-• Users frequently omit or add hyphens when typing
-.br
-• Brand consistency issues create multiple plausible versions
-.br
-• Email systems may treat hyphenated domains differently
-.br
-.br
-BReal-world examples:R
-.br
-paypal.com → pay-pal.com (brand segmentation)
-.br
-facebook.com → face-book.com (compound separation)
-.br
-linkedin.com → linked-in.com (phrasal separation)
-.br
-wordpress.com → word-press.com (compound word hyphenation)
-
-.TP
-.B subdomain-injection
-Injection of subdomain components and manipulation of domain hierarchy.
-.br
-Examples: google.com → www.google.com, mail.google.com, secure.google.com
-
-.TP
-.B dot-insertion
-Strategic insertion of dots within domain names to create subdomain confusion.
-.br
-Examples: google.com → g.oogle.com, goo.gle.com, go.ogle.com
-
-.TP
-.B dot-omission
-Removal of dots from existing subdomains or compound domains.
-.br
-Examples: sub.domain.com → subdomain.com, my.site.com → mysite.com
-
-.TP
-.B dot-hyphen-substitution
-Replacement of dots with hyphens and vice versa in domain structures.
-.br
-Examples: sub.domain.com → sub-domain.com, my-site.com → my.site.com
-
-.SS Domain Extensions
-TLD and domain extension manipulations:
-
-.TP
-.B tld-variations
-Alternative top-level domain variations using common TLD substitutions.
-.br
-Examples: google.com → google.net, google.org, google.co, google.io
-
-.TP
-.B intl-tld
-International and country-code TLD variations.
-.br
-Examples: google.com → google.co.uk, google.de, google.fr, google.ca
-
-.TP
-.B wrong-sld
-Wrong second-level domain substitutions in ccTLD contexts.
-.br
-Examples: site.co.uk → site.com.uk, domain.org.uk → domain.co.uk
-
-.TP
-.B combosquatting
-Strategic transformation that combines target domain names with common dictionary words as prefixes or suffixes to create compound domains that appear to offer enhanced or related services. This technique exploits users' trust in familiar brand names while adding contextual legitimacy through meaningful word combinations, making it one of the most effective social engineering approaches in domain squatting.
-.br
-.br
-BCombosquatting word categories:R
-.br
-• \fBSecurity terms\fR: secure-, safe-, protected-, verified-, trusted-
-.br
-• \fBService descriptors\fR: -service, -support, -help, -center, -portal
-.br
-• \fBPersonalization\fR: my-, your-, personal-, private-
-.br
-• \fBAuthority markers\fR: official-, real-, authentic-, legitimate-
-.br
-• \fBAction words\fR: login-, download-, access-, connect-, join-
-.br
-• \fBTechnology terms\fR: -app, -online, -web, -digital, -cloud
-.br
-.br
-BCommon combosquatting patterns:R
-.br
-• \fBgoogle → securegoogle, googlesecure, mygoogle\fR: Security and personalization
-.br
-• \fBpaypal → paypallogin, officialpaypal, safePayPal\fR: Authentication and authority
-.br
-• \fBamazon → amazonstore, shopamazon, amazonapp\fR: Service extension
-.br
-• \fBmicrosoft → microsoftofficial, realmicrosoft, microsoftsupport\fR: Authority and service
-.br
-• \fBfacebook → facebooklogin, myfacebook, facebookconnect\fR: Access and personalization
-.br
-.br
-BPrefix combinations (brand enhancement):R
-.br
-• \fBSecurity prefixes\fR: secure-paypal.com, safe-amazon.com, protected-google.com
-.br
-• \fBPersonal prefixes\fR: my-facebook.com, your-microsoft.com, personal-linkedin.com
-.br
-• \fBAuthority prefixes\fR: official-spotify.com, real-netflix.com, verified-twitter.com
-.br
-• \fBService prefixes\fR: support-apple.com, help-adobe.com, service-oracle.com
-.br
-.br
-BSuffix combinations (service extension):R
-.br
-• \fBAction suffixes\fR: google-login.com, paypal-access.com, amazon-checkout.com
-.br
-• \fBService suffixes\fR: microsoft-support.com, apple-service.com, adobe-help.com
-.br
-• \fBTech suffixes\fR: facebook-app.com, twitter-online.com, linkedin-portal.com
-.br
-• \fBLocation suffixes\fR: paypal-usa.com, amazon-europe.com, google-asia.com
-.br
-.br
-BPsychological manipulation tactics:R
-.br
-• Creates perception of enhanced security or service
-.br
-• Leverages trust in established brand names
-.br
-• Suggests official or authorized relationship
-.br
-• Appeals to users seeking specific functionality
-.br
-• Exploits expectation of branded sub-services
-.br
-.br
-BIndustry-specific combinations:R
-.br
-• \fBFinancial\fR: bankofamerica-secure.com, chase-login.com, wellsfargo-online.com
-.br
-• \fBTechnology\fR: microsoft-support.com, apple-store.com, oracle-cloud.com
-.br
-• \fBSocial media\fR: facebook-messenger.com, twitter-api.com, instagram-business.com
-.br
-• \fBE-commerce\fR: amazon-prime.com, ebay-secure.com, shopify-store.com
-.br
-.br
-BReal-world attack examples:R
-.br
-paypal-verification.com (combines brand + process)
-.br
-secure-amazon-login.com (security + brand + action)
-.br
-microsoft-support-center.com (brand + service + location)
-.br
-google-account-recovery.com (brand + object + action)
-
-.TP
-.B brand-confusion
-Addition of brand-related terms to create confusion with legitimate brands.
-.br
-Examples: google.com → googlebrand.com, officialgoogle.com, google-secure.com
-
-.TP
-.B domain-prefix
-Addition of common prefixes to domain names.
-.br
-Examples: google.com → mygoogle.com, thegoogle.com, secure-google.com
-
-.TP
-.B domain-suffix
-Addition of common suffixes to domain names.
-.br
-Examples: google.com → google-secure.com, google-official.com, google-site.com
-
-.SS Transformation Bundles
-Logical groupings of related transformations:
-
-.TP
-.B lookalike
-Character-level transformations that create visually similar domains. This is the default transformation bundle, specifically designed to generate domains that can fool users through visual deception. The lookalike bundle combines four core transformation types that attackers commonly use in phishing campaigns and typosquatting attacks.
-.br
-.br
-The lookalike bundle includes:
-.br
-• \fB1337speak\fR - Leetspeak character substitutions (see 1337speak section)
-.br
-• \fBmisspelling\fR - Comprehensive typing error simulation (see misspelling section)  
-.br
-• \fBfat-finger\fR - Accidental keypress and repetition errors (see fat-finger section)
-.br
-• \fBmixed-encodings\fR - Unicode homograph attacks (see mixed-encodings section)
-.br
-.br
-\fBWhy lookalike is the default:\fR This bundle represents the most dangerous and commonly used techniques in real-world attacks. These transformations are specifically chosen because they:
-.br
-• Create domains that look nearly identical to the original
-.br
-• Are difficult for users to spot, especially on mobile devices
-.br
-• Require no technical sophistication from attackers
-.br
-• Have high success rates in phishing campaigns
-.br
-• Cover both automated (typos, fat-finger) and intentional (1337speak, homographs) attack vectors
-.br
-.br
-For detailed explanations and examples of each transformation, see the individual transformation sections below.
-
-
-
-.SS COMBINATORIAL TRANSFORMATION MECHANICS
-.B domfuzz
-employs sophisticated algorithms to systematically generate domain variations through comprehensive position-based and combinatorial approaches. Understanding these mechanics is crucial for defensive security professionals implementing comprehensive domain monitoring strategies.
-
-.TP
-.B Position-Based Generation
-Each transformation algorithm operates by identifying Ball possible positionsR within a domain where modifications can occur, then systematically applying changes at each valid location:
-
-BExample: 1337speak on "google.com"R
-.br
-• Position analysis: g[0], o[1], o[2], g[3], l[4], e[5] 
-.br
-• Valid substitution positions: o[1]→0, o[2]→0, g[3]→9, l[4]→1, e[5]→3
-.br
-• Single-position results: g0ogle.com, go0gle.com, goo9le.com, goog1e.com, googl3.com
-.br
-• Multi-position combinations: g00gle.com, g0o9le.com, g009l3.com, etc.
-
-.TP
-.B Combinatorial Complexity
-Transformations generate variations through multiple combinatorial approaches:
-
-\fBSingle Transformations (Default Mode)\fR:
-.br
-• Each transformation applied independently to original domain
-.br
-• Systematic enumeration of all valid position combinations
-.br
-• Realistic constraints prevent combinatorial explosion
-.br
-• Example: "paypal" with 1337speak → 32 variations across all position combinations
-
-\fBMulti-Position Combinations\fR:
-.br
-• Algorithms intelligently combine multiple modifications within single transformation
-.br
-• Length-aware constraints (short domains: 1-2 changes, long domains: up to 40% modification)
-.br
-• Distance-based spacing prevents adjacent modifications in short domains
-.br
-• Priority weighting favors high-impact substitutions (o→0, l→1 prioritized over rare substitutions)
-
-\fBCombo Mode Chains\fR:
-.br
-• Sequential application of 2-5 different transformation types
-.br
-• Each transformation operates on result of previous transformation
-.br
-• Weighted selection prevents conflicting transformations
-.br
-• Example chain: google.com → 1337speak → gooogle.com → fat-finger → goo0gle.com → misspelling → goo0gle.net
-
-.TP
-.B Algorithmic Intelligence
-Modern typosquatting attacks require sophisticated generation algorithms that balance comprehensiveness with realism:
-
-\fBConstraint Systems\fR:
-.br
-• \fBLength constraints\fR: Shorter domains receive fewer modifications to maintain plausibility
-.br
-• \fBFrequency weighting\fR: Common errors (o→0, l→1) generated more often than rare ones
-.br
-• \fBPosition analysis\fR: Errors weighted by natural typing patterns (more errors in middle of words)
-.br
-• BReadability preservationR: Maximum modification percentages prevent unrecognizable results
-
-BRealistic Error ModelingR:
-.br
-• BQWERTY adjacencyR: Keyboard-aware error generation based on physical key proximity
-.br
-• \fBPhonetic patterns\fR: Sound-based substitutions follow linguistic probability distributions
-.br
-• \fBTyping psychology\fR: Error placement reflects actual human typing behavior studies
-.br
-• \fBDevice-specific patterns\fR: Mobile vs desktop typing error signatures
-
-.TP
-.B Permutation Mathematics  
-The mathematical foundation ensures comprehensive coverage while maintaining computational efficiency:
-
-\fBPosition Permutations\fR:
-.br
-For domain of length n with k transformable positions:
-.br
-• Single position: k variations
-.br
-• Two positions: C(k,2) = k!/(2!(k-2)!) combinations  
-.br
-• Multiple positions: Σ C(k,i) for i=1 to max_errors
-
-\fBExample: "amazon" (6 characters) with 1337speak\fR:
-.br
-• Transformable positions: a[0]→4, a[2]→4, o[3]→0, n[5]→n (4 positions)
-.br
-• Single position: 4 variations  
-.br
-• Two positions: C(4,2) = 6 combinations
-.br
-• Three positions: C(4,3) = 4 combinations
-.br
-• Total theoretical: 14 combinations (filtered by realistic constraints)
-
-\fBConstraint Filtering\fR:
-.br
-• Theoretical combinations filtered through multiple constraint layers
-.br
-• Similarity thresholds eliminate excessive modifications
-.br
-• Readability filters ensure recognizable results
-.br
-• Domain validation removes invalid DNS names
-.br
-• Deduplication eliminates identical results from different algorithms
+\fBMost common bit-flip positions:\fR Lower-order bits (positions 0-2) are most vulnerable to errors, while higher-order bits (positions 6-7) are more stable but cause dramatic character changes when they flip.
 
 .SH MODES OF OPERATION
 
@@ -1179,8 +469,16 @@ Generate all possible variations for example.com:
 .B domfuzz example.com
 
 .TP
-Generate only character substitution and keyboard variations:
-.B domfuzz \-t char\-sub,keyboard example.com
+Generate using the lookalike bundle (visual deception only):
+.B domfuzz \-t lookalike example.com
+
+.TP
+Generate using the error bundle (system and typing errors):
+.B domfuzz \-t error example.com
+
+.TP
+Generate only specific individual transformations:
+.B domfuzz \-t 1337speak,bitsquatting example.com
 
 .TP
 Check registration status of variations, showing only registered domains:
@@ -1192,7 +490,7 @@ Generate 50 variations with similarity scoring:
 
 .TP
 Run individual transformations with verbose output:
-.B domfuzz \-1 \-v \-t misspellings,homoglyphs example.com
+.B domfuzz \-1 \-v \-t misspelling,mixed-encodings example.com
 
 .TP
 Find highly similar variations (threshold 0.8 or higher):
@@ -1201,6 +499,10 @@ Find highly similar variations (threshold 0.8 or higher):
 .TP
 Use custom dictionary for combosquatting:
 .B domfuzz \-t combosquatting \-\-dictionary /path/to/keywords.txt example.com
+
+.TP
+Use all available transformations:
+.B domfuzz \-t all example.com
 
 .SH SECURITY CONSIDERATIONS
 .B domfuzz
